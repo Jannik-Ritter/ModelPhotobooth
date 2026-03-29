@@ -99,8 +99,15 @@ local function PreviewViewport(props: Props)
 		camRef.current = cam
 		cloneRef.current = clone
 		cam.FieldOfView = math.max(props.fov, 1)
-		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov, props.cameraDistance, props.roll,
-			Vector3.new(props.offsetX, props.offsetY, props.offsetZ))
+		cam.CFrame = getCF(
+			clone,
+			props.yaw,
+			props.pitch,
+			props.fov,
+			props.cameraDistance,
+			props.roll,
+			Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
+		)
 		return function()
 			cam:Destroy()
 			if clone then
@@ -112,20 +119,32 @@ local function PreviewViewport(props: Props)
 	end, { activeInstance } :: { any })
 
 	-- Update camera when angles, distance, or offset change
-	React.useEffect(function()
-		if camRef.current and cloneRef.current then
-			camRef.current.FieldOfView = math.max(props.fov, 1)
-			camRef.current.CFrame = getCF(
-				cloneRef.current,
-				props.yaw,
-				props.pitch,
-				props.fov,
-				props.cameraDistance,
-				props.roll,
-				Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
-			)
-		end
-	end, { props.yaw, props.pitch, props.fov, props.cameraDistance, props.roll, props.offsetX, props.offsetY, props.offsetZ } :: { any })
+	React.useEffect(
+		function()
+			if camRef.current and cloneRef.current then
+				camRef.current.FieldOfView = math.max(props.fov, 1)
+				camRef.current.CFrame = getCF(
+					cloneRef.current,
+					props.yaw,
+					props.pitch,
+					props.fov,
+					props.cameraDistance,
+					props.roll,
+					Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
+				)
+			end
+		end,
+		{
+			props.yaw,
+			props.pitch,
+			props.fov,
+			props.cameraDistance,
+			props.roll,
+			props.offsetX,
+			props.offsetY,
+			props.offsetZ,
+		} :: { any }
+	)
 
 	-- Trackball / translate
 	local trackball = useTrackball(function(dx: number, dy: number)
@@ -225,6 +244,9 @@ local function PreviewViewport(props: Props)
 		Size = UDim2.new(1, -220, 1, -96),
 		BackgroundTransparency = 1,
 	}, {
+		aspectRatioConstraint = e("UIAspectRatioConstraint", {
+			AspectRatio = 1,
+		}),
 		padding = e("UIPadding", {
 			PaddingLeft = UDim.new(0, 4),
 			PaddingRight = UDim.new(0, 4),
