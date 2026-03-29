@@ -14,7 +14,7 @@ Store.ACTIONS = {
 	SET_MODELS = "SET_MODELS",
 	SET_CAPTURE_STATUS = "SET_CAPTURE_STATUS",
 	SET_CAPTURING = "SET_CAPTURING",
-	SET_ACTIVE_MODEL_INDEX = "SET_ACTIVE_MODEL_INDEX",
+	SET_SELECTION = "SET_SELECTION",
 	TOGGLE_SECTION = "TOGGLE_SECTION",
 	SET_COLOR_PICKER_TARGET = "SET_COLOR_PICKER_TARGET",
 	SET_PREVIEW_IMAGE = "SET_PREVIEW_IMAGE",
@@ -41,6 +41,7 @@ export type EffectState = {
 	opacity: number,
 	distance: number,
 	blur: number,
+	angle: number,
 }
 
 export type InnerShadowState = {
@@ -65,19 +66,21 @@ export type AppState = {
 	models: { ModelEntry },
 	capturing: boolean,
 	captureProgress: number,
-	activeModelIndex: number,
+	captureTotal: number,
+	selectedModelIndices: { number },
 	collapsedSections: { [string]: boolean },
 	colorPickerTarget: string?,
 	previewImage: EditableImage?,
 	previewTitle: string?,
+	previewModelIndex: number?,
 }
 
 Store.DEFAULT_STATE = {
-	yaw = 45,
+	yaw = 180 + 45,
 	pitch = 25,
 	fov = 70,
 	outline = { enabled = false, color = Color3.new(0, 0, 0), thickness = 3 },
-	dropShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6 },
+	dropShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 45 },
 	innerShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 225 },
 	bgMode = "transparent",
 	bgColor = Color3.new(1, 1, 1),
@@ -85,11 +88,13 @@ Store.DEFAULT_STATE = {
 	models = {},
 	capturing = false,
 	captureProgress = 0,
-	activeModelIndex = 0,
+	captureTotal = 0,
+	selectedModelIndices = {},
 	collapsedSections = {},
 	colorPickerTarget = nil,
 	previewImage = nil,
 	previewTitle = nil,
+	previewModelIndex = nil,
 }
 
 Store.PRESETS = {
@@ -116,7 +121,7 @@ local handlers = {
 	[A.SET_MODELS] = require(actions.setModels),
 	[A.SET_CAPTURE_STATUS] = require(actions.setCaptureStatus),
 	[A.SET_CAPTURING] = require(actions.setCapturing),
-	[A.SET_ACTIVE_MODEL_INDEX] = require(actions.setActiveModelIndex),
+	[A.SET_SELECTION] = require(actions.setSelection),
 	[A.TOGGLE_SECTION] = require(actions.toggleSection),
 	[A.SET_COLOR_PICKER_TARGET] = require(actions.setColorPickerTarget),
 	[A.SET_PREVIEW_IMAGE] = require(actions.setPreviewImage),

@@ -9,7 +9,7 @@ local e = React.createElement
 
 type Props = {
 	models: { Store.ModelEntry },
-	activeModelIndex: number,
+	selectedModelIndices: { number },
 	yaw: number,
 	pitch: number,
 	fov: number,
@@ -39,6 +39,11 @@ local function ModelStrip(props: Props)
 		})
 	end
 
+	local selectedSet: { [number]: boolean } = {}
+	for _, idx in ipairs(props.selectedModelIndices) do
+		selectedSet[idx] = true
+	end
+
 	local thumbs = {}
 	for i, entry in ipairs(props.models) do
 		thumbs["thumb_" .. i] = e(ModelThumb, {
@@ -46,7 +51,7 @@ local function ModelStrip(props: Props)
 			yaw = props.yaw,
 			pitch = props.pitch,
 			fov = props.fov,
-			isActive = i == props.activeModelIndex,
+			isActive = selectedSet[i] == true,
 			onSelect = function()
 				props.onSelectModel(i)
 			end,

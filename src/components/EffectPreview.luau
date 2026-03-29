@@ -2,6 +2,7 @@ local AssetService = game:GetService("AssetService")
 
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local StudioComponents = require(Packages.studiocomponents)
 
 local postProcess = require(script.Parent.Parent.lib.postProcess)
 local Store = require(script.Parent.Parent.Store)
@@ -17,10 +18,40 @@ type Props = {
 	outline: Store.OutlineState,
 	dropShadow: Store.EffectState,
 	innerShadow: Store.InnerShadowState,
+	bgMode: string,
+	bgColor: Color3,
 	LayoutOrder: number?,
 }
 
-local function drawBaseCircle(): buffer
+local function isColorNear(a: Color3, b: Color3): boolean
+	local eps = 0.01
+	return math.abs(a.R - b.R) <= eps and math.abs(a.G - b.G) <= eps and math.abs(a.B - b.B) <= eps
+end
+
+local function getPreviewColors(bgMode: string, bgColor: Color3): (Color3, Color3)
+	-- None -> white dot on studio-like dark preview background (existing look)
+	if bgMode == "transparent" then
+		return Color3.new(1, 1, 1), Color3.fromRGB(38, 38, 38)
+	end
+
+	-- White export background -> white dot on black preview background
+	if isColorNear(bgColor, Color3.new(1, 1, 1)) then
+		return Color3.new(1, 1, 1), Color3.new(0, 0, 0)
+	end
+
+	-- Black export background (preset is near-black) -> black dot on white preview background
+	if isColorNear(bgColor, Color3.fromRGB(18, 18, 18)) or isColorNear(bgColor, Color3.new(0, 0, 0)) then
+		return Color3.new(0, 0, 0), Color3.new(1, 1, 1)
+	end
+
+	-- Fallback for any future custom color mode values
+	return Color3.new(1, 1, 1), Color3.fromRGB(38, 38, 38)
+end
+
+local function drawBaseCircle(circleColor: Color3): buffer
+	local cr = math.floor(circleColor.R * 255 + 0.5)
+	local cg = math.floor(circleColor.G * 255 + 0.5)
+	local cb = math.floor(circleColor.B * 255 + 0.5)
 	local buf = buffer.create(CANVAS * CANVAS * 4)
 	for y = 0, CANVAS - 1 do
 		for x = 0, CANVAS - 1 do
@@ -28,9 +59,9 @@ local function drawBaseCircle(): buffer
 			local dy = y - CIRCLE_CY
 			if dx * dx + dy * dy <= CIRCLE_R2 then
 				local o = (y * CANVAS + x) * 4
-				buffer.writeu8(buf, o, 255)
-				buffer.writeu8(buf, o + 1, 255)
-				buffer.writeu8(buf, o + 2, 255)
+				buffer.writeu8(buf, o, cr)
+				buffer.writeu8(buf, o + 1, cg)
+				buffer.writeu8(buf, o + 2, cb)
 				buffer.writeu8(buf, o + 3, 255)
 			end
 		end
@@ -39,14 +70,16 @@ local function drawBaseCircle(): buffer
 end
 
 local function EffectPreview(props: Props)
+	local theme = StudioComponents.useTheme()
 	local editableImage, setEditableImage = React.useState(nil :: EditableImage?)
 	local imgRef = React.useRef(nil :: EditableImage?)
+	local dotColor, canvasColor = getPreviewColors(props.bgMode, props.bgColor)
 
 	-- Regenerate preview whenever any effect setting changes.
 	-- shallowMerge in the reducer creates new table identities on each dispatch,
 	-- so table identity comparison correctly detects any field change.
 	React.useEffect(function()
-		local buf = drawBaseCircle()
+		local buf = drawBaseCircle(dotColor)
 
 		-- Apply in the same order as captureOne: inner shadow → outline → drop shadow
 		if props.innerShadow.enabled then
@@ -72,7 +105,8 @@ local function EffectPreview(props: Props)
 				props.dropShadow.color,
 				props.dropShadow.opacity,
 				props.dropShadow.distance,
-				props.dropShadow.blur
+				props.dropShadow.blur,
+				props.dropShadow.angle
 			)
 		end
 
@@ -84,7 +118,7 @@ local function EffectPreview(props: Props)
 		end
 		imgRef.current = img
 		setEditableImage(img)
-	end, { props.outline, props.dropShadow, props.innerShadow } :: { any })
+	end, { props.outline, props.dropShadow, props.innerShadow, dotColor } :: { any })
 
 	-- Destroy image on unmount (e.g. when section is collapsed)
 	React.useEffect(function()
@@ -104,7 +138,9 @@ local function EffectPreview(props: Props)
 		canvas = e("Frame", {
 			Size = UDim2.fromOffset(160, 160),
 			Position = UDim2.new(0.5, -80, 0, 4),
-			BackgroundColor3 = Color3.fromRGB(38, 38, 38),
+			BackgroundColor3 = if props.bgMode == "transparent"
+				then theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground)
+				else canvasColor,
 			BorderSizePixel = 0,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),

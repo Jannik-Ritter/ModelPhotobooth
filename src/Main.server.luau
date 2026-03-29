@@ -10,11 +10,11 @@ local App = require(script.Parent.App)
 
 -- Toolbar
 local toolbar = plugin:CreateToolbar("Model Photobooth")
-local toggleBtn = toolbar:CreateButton("ModelPhotobooth", "Capture model renders", "rbxassetid://90564581052151")
+local toggleBtn = toolbar:CreateButton("ModelPhotobooth", "Render Models", "rbxassetid://132844739921945")
 
 -- Widget
 local widgetInfo = DockWidgetPluginGuiInfo.new(
-	Enum.InitialDockState.Float,
+	Enum.InitialDockState.Left,
 	false, -- initially disabled
 	false, -- don't override saved state
 	780,

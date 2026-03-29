@@ -11,7 +11,7 @@ type CaptureSettings = {
 	pitch: number,
 	fov: number,
 	outline: { enabled: boolean, color: Color3, thickness: number },
-	dropShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number },
+	dropShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	innerShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	bgMode: string,
 	bgColor: Color3,
@@ -177,7 +177,8 @@ local function captureOne(model: Instance, settings: CaptureSettings): EditableI
 			settings.dropShadow.color,
 			settings.dropShadow.opacity,
 			settings.dropShadow.distance,
-			settings.dropShadow.blur
+			settings.dropShadow.blur,
+			settings.dropShadow.angle
 		)
 	end
 
@@ -185,9 +186,12 @@ local function captureOne(model: Instance, settings: CaptureSettings): EditableI
 	outEI:WritePixelsBuffer(Vector2.zero, Vector2.new(w, h), out)
 
 	if settings.exportSize > 0 then
-		pcall(function()
-			outEI:Resize(Vector2.new(settings.exportSize, settings.exportSize))
-		end)
+		local targetSize = Vector2.new(settings.exportSize, settings.exportSize)
+		local resized = AssetService:CreateEditableImage({ Size = targetSize })
+		local half = settings.exportSize / 2
+		resized:DrawImageTransformed(Vector2.new(half, half), Vector2.new(settings.exportSize / w, settings.exportSize / h), 0, outEI)
+		outEI:Destroy()
+		outEI = resized
 	end
 
 	return outEI

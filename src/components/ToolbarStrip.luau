@@ -8,20 +8,15 @@ type Props = {
 	statusText: string,
 	capturing: boolean,
 	onCapture: () -> (),
+	onCaptureAll: () -> (),
 	onExport: () -> (),
 	captureDisabled: boolean,
+	captureAllDisabled: boolean,
 	exportDisabled: boolean,
 }
 
 local function ToolbarStrip(props: Props)
 	local theme = StudioComponents.useTheme()
-
-	local statusContent = e(StudioComponents.Label, {
-		Text = props.statusText,
-		Size = UDim2.new(1, -180, 1, 0),
-		Position = UDim2.fromOffset(10, 0),
-		TextXAlignment = Enum.TextXAlignment.Left,
-	})
 
 	return e("Frame", {
 		Size = UDim2.new(1, 0, 0, 36),
@@ -35,10 +30,15 @@ local function ToolbarStrip(props: Props)
 			BorderSizePixel = 0,
 			ZIndex = 2,
 		}),
-		status = statusContent,
+		status = e(StudioComponents.Label, {
+			Text = props.statusText,
+			Size = UDim2.new(1, -296, 1, 0),
+			Position = UDim2.fromOffset(10, 0),
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}),
 		buttons = e("Frame", {
-			Size = UDim2.new(0, 170, 1, 0),
-			Position = UDim2.new(1, -170, 0, 0),
+			Size = UDim2.new(0, 296, 1, 0),
+			Position = UDim2.new(1, -296, 0, 0),
 			BackgroundTransparency = 1,
 		}, {
 			layout = e("UIListLayout", {
@@ -55,15 +55,22 @@ local function ToolbarStrip(props: Props)
 				Text = "Capture Selected",
 				OnActivated = props.onCapture,
 				Disabled = props.captureDisabled or props.capturing,
-				Size = UDim2.new(0, 100, 0, 24),
+				Size = UDim2.fromOffset(112, 24),
 				LayoutOrder = 1,
 			}),
+			captureAll = e(StudioComponents.Button, {
+				Text = "Capture All",
+				OnActivated = props.onCaptureAll,
+				Disabled = props.captureAllDisabled or props.capturing,
+				Size = UDim2.fromOffset(82, 24),
+				LayoutOrder = 2,
+			}),
 			export = e(StudioComponents.MainButton, {
-				Text = "Export",
+				Text = "Export All",
 				OnActivated = props.onExport,
 				Disabled = props.exportDisabled,
-				Size = UDim2.new(0, 60, 0, 24),
-				LayoutOrder = 2,
+				Size = UDim2.fromOffset(76, 24),
+				LayoutOrder = 3,
 			}),
 		}),
 	})

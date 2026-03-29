@@ -3,6 +3,7 @@ local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
+local ModalCloseButton = require(script.Parent.ModalCloseButton)
 
 local e = React.createElement
 
@@ -24,6 +25,11 @@ type Props = {
 
 local function ColorPickerModal(props: Props)
 	local theme = StudioComponents.useTheme()
+	local intermediateColor, setIntermediateColor = React.useState(props.color)
+
+	React.useEffect(function()
+		setIntermediateColor(props.color)
+	end, { props.color })
 
 	local swatches = {}
 	for i, c in ipairs(SWATCH_COLORS) do
@@ -55,7 +61,7 @@ local function ColorPickerModal(props: Props)
 
 	-- Panel height: 32 (title) + 34 (swatches) + 285 (picker) + 40 (footer) = 391
 	return e(Darkener, {
-		onBackdropClick = props.onClose,
+		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
 			Size = UDim2.fromOffset(300, 391),
@@ -63,7 +69,7 @@ local function ColorPickerModal(props: Props)
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
 			BorderSizePixel = 0,
-			Active = true,
+			Active = false,
 		}, {
 			layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
@@ -92,13 +98,8 @@ local function ColorPickerModal(props: Props)
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 				}),
-				close = e("ImageButton", {
-					Size = UDim2.fromOffset(16, 16),
-					Position = UDim2.new(1, -24, 0.5, -8),
-					BackgroundTransparency = 1,
-					Image = "rbxassetid://129976509676301",
-					ImageColor3 = theme:GetColor(Enum.StudioStyleGuideColor.SubText),
-					[React.Event.Activated] = props.onClose,
+				close = e(ModalCloseButton, {
+					onActivated = props.onClose,
 				}),
 			}),
 
@@ -125,8 +126,10 @@ local function ColorPickerModal(props: Props)
 			}, {
 				picker = e(StudioComponents.ColorPicker, {
 					Size = UDim2.fromScale(1, 1),
-					Color = props.color,
-					OnChanged = props.onColorChanged,
+					Color = intermediateColor,
+					OnChanged = function(newColor)
+						setIntermediateColor(newColor)
+					end,
 				}),
 			}),
 
@@ -137,7 +140,10 @@ local function ColorPickerModal(props: Props)
 			}, {
 				doneButton = e(StudioComponents.MainButton, {
 					Text = "Done",
-					OnActivated = props.onClose,
+					OnActivated = function()
+						props.onColorChanged(intermediateColor)
+						props.onClose()
+					end,
 					Size = UDim2.new(1, -16, 0, 24),
 					Position = UDim2.fromOffset(8, 8),
 				}),

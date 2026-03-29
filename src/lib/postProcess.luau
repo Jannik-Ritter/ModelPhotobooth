@@ -62,15 +62,27 @@ function postProcess.blurAlphaFlat(src: buffer, w: number, h: number, radius: nu
 	return out
 end
 
-function postProcess.applyDropShadow(buf: buffer, w: number, h: number, color: Color3, opacity: number, dist: number, blur: number): buffer
+function postProcess.applyDropShadow(
+	buf: buffer,
+	w: number,
+	h: number,
+	color: Color3,
+	opacity: number,
+	dist: number,
+	blur: number,
+	angle: number?
+): buffer
 	local cr = color.R
 	local cg = color.G
 	local cb = color.B
 	local opF = opacity / 100
+	local rad = math.rad(angle or 45)
+	local offX = math.round(dist * math.cos(rad))
+	local offY = math.round(dist * math.sin(rad))
 	local sAlpha = buffer.create(w * h)
 	for y = 0, h - 1 do
 		for x = 0, w - 1 do
-			local sx, sy = x - dist, y - dist
+			local sx, sy = x - offX, y - offY
 			if sx >= 0 and sx < w and sy >= 0 and sy < h then
 				buffer.writeu8(sAlpha, y * w + x, buffer.readu8(buf, (sy * w + sx) * 4 + 3))
 			end

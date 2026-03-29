@@ -12,6 +12,7 @@ local e = React.createElement
 local PRESET_ORDER = { "Front", "Side", "Iso", "3/4" }
 local EXPORT_SIZES = {
 	{ label = "Native", value = 0 },
+	{ label = "1024", value = 1024 },
 	{ label = "512", value = 512 },
 	{ label = "256", value = 256 },
 	{ label = "128", value = 128 },
@@ -50,68 +51,29 @@ local function Sidebar(props: Props)
 		end
 	end
 
-	local presetButtons = {}
-	presetButtons["layout"] = e("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
-	})
-	for i, name in ipairs(PRESET_ORDER) do
-		local preset = Store.PRESETS[name]
-		local isActive = activePreset == name
-		local BtnComponent = if isActive then StudioComponents.MainButton else StudioComponents.Button
-		presetButtons["preset_" .. name] = e(BtnComponent, {
-			Text = name,
-			OnActivated = function()
-				props.dispatch({ type = A.SET_CAMERA, yaw = preset.yaw, pitch = preset.pitch, fov = preset.fov })
-			end,
-			Size = UDim2.new(0, 44, 0, 22),
-			LayoutOrder = i,
-		})
+	-- Background selected label
+	local selectedBg = nil
+	for _, preset in ipairs(BG_PRESETS) do
+		local match = (preset.mode == "transparent" and state.bgMode == "transparent")
+			or (
+				preset.mode == "color"
+				and state.bgMode == "color"
+				and preset.color ~= nil
+				and state.bgColor == preset.color
+			)
+		if match then
+			selectedBg = preset.label
+			break
+		end
 	end
 
-	-- Background buttons
-	local bgButtons = {}
-	bgButtons["layout"] = e("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
-	})
-	for i, preset in ipairs(BG_PRESETS) do
-		local isActive = (preset.mode == "transparent" and state.bgMode == "transparent")
-			or (preset.mode == "color" and state.bgMode == "color" and preset.color and state.bgColor == preset.color)
-		local BtnComponent = if isActive then StudioComponents.MainButton else StudioComponents.Button
-		bgButtons["bg_" .. i] = e(BtnComponent, {
-			Text = preset.label,
-			OnActivated = function()
-				props.dispatch({ type = A.SET_BG_MODE, value = preset.mode })
-				if preset.color then
-					props.dispatch({ type = A.SET_BG_COLOR, value = preset.color })
-				end
-			end,
-			Size = UDim2.new(0, 52, 0, 22),
-			LayoutOrder = i,
-		})
-	end
-
-	-- Export size buttons
-	local sizeButtons = {}
-	sizeButtons["layout"] = e("UIListLayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
-	})
-	for i, opt in ipairs(EXPORT_SIZES) do
-		local isActive = state.exportSize == opt.value
-		local BtnComponent = if isActive then StudioComponents.MainButton else StudioComponents.Button
-		sizeButtons["size_" .. i] = e(BtnComponent, {
-			Text = opt.label,
-			OnActivated = function()
-				props.dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
-			end,
-			Size = UDim2.new(0, 44, 0, 22),
-			LayoutOrder = i,
-		})
+	-- Export size selected label
+	local selectedSize = nil
+	for _, opt in ipairs(EXPORT_SIZES) do
+		if state.exportSize == opt.value then
+			selectedSize = opt.label
+			break
+		end
 	end
 
 	return e("Frame", {
@@ -151,7 +113,37 @@ local function Sidebar(props: Props)
 					Size = UDim2.new(1, 0, 0, 22),
 					BackgroundTransparency = 1,
 					LayoutOrder = 1,
-				}, presetButtons),
+				}, {
+					layout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 6),
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+					}),
+					label = e(StudioComponents.Label, {
+						Text = "Preset",
+						Size = UDim2.new(0, 40, 1, 0),
+						LayoutOrder = 1,
+					}),
+					dropdown = e(StudioComponents.Dropdown, {
+						Items = PRESET_ORDER,
+						SelectedItem = activePreset,
+						OnItemSelected = function(name)
+							if name then
+								local preset = Store.PRESETS[name]
+								props.dispatch({
+									type = A.SET_CAMERA,
+									yaw = preset.yaw,
+									pitch = preset.pitch,
+									fov = preset.fov,
+								})
+							end
+						end,
+						RowHeight = 22,
+						Size = UDim2.new(1, -46, 1, 0),
+						LayoutOrder = 2,
+					}),
+				}),
 				fov = e("Frame", {
 					Size = UDim2.new(1, 0, 0, 22),
 					BackgroundTransparency = 1,
@@ -195,11 +187,43 @@ local function Sidebar(props: Props)
 				onToggle = toggleSection("Background"),
 				LayoutOrder = 2,
 			}, {
-				buttons = e("Frame", {
+				color = e("Frame", {
 					Size = UDim2.new(1, 0, 0, 22),
 					BackgroundTransparency = 1,
 					LayoutOrder = 1,
-				}, bgButtons),
+				}, {
+					layout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 6),
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+					}),
+					label = e(StudioComponents.Label, {
+						Text = "Color",
+						Size = UDim2.new(0, 40, 1, 0),
+						LayoutOrder = 1,
+					}),
+					dropdown = e(StudioComponents.Dropdown, {
+						Items = { "None", "White", "Black" },
+						SelectedItem = selectedBg,
+						OnItemSelected = function(lbl)
+							if lbl then
+								for _, preset in ipairs(BG_PRESETS) do
+									if preset.label == lbl then
+										props.dispatch({ type = A.SET_BG_MODE, value = preset.mode })
+										if preset.color then
+											props.dispatch({ type = A.SET_BG_COLOR, value = preset.color })
+										end
+										break
+									end
+								end
+							end
+						end,
+						RowHeight = 22,
+						Size = UDim2.new(1, -46, 1, 0),
+						LayoutOrder = 2,
+					}),
+				}),
 			}),
 
 			-- Effects Preview section
@@ -213,6 +237,8 @@ local function Sidebar(props: Props)
 					outline = state.outline,
 					dropShadow = state.dropShadow,
 					innerShadow = state.innerShadow,
+					bgMode = state.bgMode,
+					bgColor = state.bgColor,
 					LayoutOrder = 1,
 				}),
 			}),
@@ -260,6 +286,7 @@ local function Sidebar(props: Props)
 					opacity = state.dropShadow.opacity,
 					distance = state.dropShadow.distance,
 					blur = state.dropShadow.blur,
+					angle = state.dropShadow.angle,
 					onToggle = function(v)
 						props.dispatch({ type = A.SET_DROP_SHADOW, value = { enabled = v } })
 					end,
@@ -274,6 +301,9 @@ local function Sidebar(props: Props)
 					end,
 					onBlurChanged = function(v)
 						props.dispatch({ type = A.SET_DROP_SHADOW, value = { blur = v } })
+					end,
+					onAngleChanged = function(v)
+						props.dispatch({ type = A.SET_DROP_SHADOW, value = { angle = v } })
 					end,
 					onColorPickerToggle = function()
 						local target = if state.colorPickerTarget == "shadow" then nil else "shadow"
@@ -331,11 +361,40 @@ local function Sidebar(props: Props)
 				onToggle = toggleSection("Export"),
 				LayoutOrder = 7,
 			}, {
-				buttons = e("Frame", {
+				size = e("Frame", {
 					Size = UDim2.new(1, 0, 0, 22),
 					BackgroundTransparency = 1,
 					LayoutOrder = 1,
-				}, sizeButtons),
+				}, {
+					layout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 6),
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+					}),
+					label = e(StudioComponents.Label, {
+						Text = "Resolution",
+						Size = UDim2.new(0, 40, 1, 0),
+						LayoutOrder = 1,
+					}),
+					dropdown = e(StudioComponents.Dropdown, {
+						Items = { "Native", "1024", "512", "256", "128" },
+						SelectedItem = selectedSize,
+						OnItemSelected = function(lbl)
+							if lbl then
+								for _, opt in ipairs(EXPORT_SIZES) do
+									if opt.label == lbl then
+										props.dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
+										break
+									end
+								end
+							end
+						end,
+						RowHeight = 22,
+						Size = UDim2.new(1, -46, 1, 0),
+						LayoutOrder = 2,
+					}),
+				}),
 			}),
 		}),
 	})

@@ -16,6 +16,8 @@ local function wrapSigned180(deg: number): number
 	return x
 end
 
+local FOV_SCROLL_STEP = 5
+
 type Props = {
 	entry: {
 		instance: Instance,
@@ -27,6 +29,7 @@ type Props = {
 	pitch: number,
 	fov: number,
 	onTrackball: (dYaw: number, dPitch: number) -> (),
+	onScroll: (newFov: number) -> (),
 }
 
 local function PreviewViewport(props: Props)
@@ -36,6 +39,7 @@ local function PreviewViewport(props: Props)
 	local cloneRef = React.useRef(nil :: Instance?)
 	local yawRef = React.useRef(props.yaw)
 	local pitchRef = React.useRef(props.pitch)
+	local fovRef = React.useRef(props.fov)
 
 	-- Keep refs in sync
 	React.useEffect(function()
@@ -44,6 +48,9 @@ local function PreviewViewport(props: Props)
 	React.useEffect(function()
 		pitchRef.current = props.pitch
 	end, { props.pitch })
+	React.useEffect(function()
+		fovRef.current = props.fov
+	end, { props.fov })
 
 	-- Clone model into viewport
 	local activeInstance = if props.entry then props.entry.instance else nil
@@ -151,7 +158,19 @@ local function PreviewViewport(props: Props)
 				AutoButtonColor = false,
 				ZIndex = 1,
 				[React.Event.InputBegan] = trackball.onInputBegan,
-				[React.Event.InputChanged] = trackball.onInputChanged,
+				[React.Event.InputChanged] = function(rbx, input)
+					if input.UserInputType == Enum.UserInputType.MouseWheel then
+						local newFov = math.clamp(fovRef.current + input.Position.Z * FOV_SCROLL_STEP, 1, 120)
+						fovRef.current = newFov
+						if camRef.current and cloneRef.current then
+							camRef.current.FieldOfView = math.max(newFov, 1)
+							camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, newFov)
+						end
+						props.onScroll(newFov)
+					else
+						trackball.onInputChanged(rbx, input)
+					end
+				end,
 				[React.Event.InputEnded] = trackball.onInputEnded,
 				[React.Event.MouseLeave] = trackball.onMouseLeave,
 			}),
