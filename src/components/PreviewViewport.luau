@@ -16,8 +16,6 @@ local function wrapSigned180(deg: number): number
 	return x
 end
 
-local FOV_SCROLL_STEP = 5
-
 type Props = {
 	entry: {
 		instance: Instance,

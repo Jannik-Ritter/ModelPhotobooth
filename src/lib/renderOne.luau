@@ -6,7 +6,7 @@ local Packages = script.Parent.Parent.Parent.Packages
 local Promise = require(Packages.promise)
 
 local getCF = require(script.Parent.getCF)
-local getCaptureScale = require(script.Parent.getCaptureScale)
+local getRenderScale = require(script.Parent.getRenderScale)
 local postProcess = require(script.Parent.postProcess)
 
 type RenderSettings = {
@@ -29,7 +29,12 @@ local SNAP_TIMEOUT = 0.05
 
 local function renderOne(model: Instance, settings: RenderSettings)
 	return Promise.new(function(resolve, reject)
-		local scale = getCaptureScale()
+		local okScale, scaleOrErr = getRenderScale():await()
+		if not okScale then
+			reject(scaleOrErr)
+			return
+		end
+		local scale = scaleOrErr
 		local CAPSIZE = math.floor(1020 / math.max(scale.X, scale.Y))
 
 		local tmpGui = Instance.new("ScreenGui")
@@ -45,7 +50,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		bgFr.Parent = tmpGui
 
 		local tmpVP = Instance.new("ViewportFrame")
-		tmpVP.Size = UDim2.new(0, CAPSIZE, 0, CAPSIZE)
+		tmpVP.Size = UDim2.fromOffset(CAPSIZE, CAPSIZE)
 		tmpVP.Position = UDim2.new(0.5, -CAPSIZE / 2, 0.5, -CAPSIZE / 2)
 		tmpVP.BorderSizePixel = 0
 		tmpVP.Ambient = Color3.fromRGB(160, 160, 160)
