@@ -15,6 +15,9 @@ type RenderSettings = {
 	roll: number,
 	fov: number,
 	cameraDistance: number,
+	cameraOffsetX: number,
+	cameraOffsetY: number,
+	cameraOffsetZ: number,
 	outline: { enabled: boolean, color: Color3, thickness: number },
 	dropShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	innerShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
@@ -81,8 +84,15 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			return
 		end
 
-		tmpCam.CFrame =
-			getCF(tmpClone, settings.yaw, settings.pitch, settings.fov, settings.cameraDistance, settings.roll)
+		tmpCam.CFrame = getCF(
+			tmpClone,
+			settings.yaw,
+			settings.pitch,
+			settings.fov,
+			settings.cameraDistance,
+			settings.roll,
+			Vector3.new(settings.cameraOffsetX or 0, settings.cameraOffsetY or 0, settings.cameraOffsetZ or 0)
+		)
 		task.wait(INTERVAL)
 
 		local vp = tmpVP.AbsolutePosition

@@ -14,6 +14,9 @@ type Props = {
 	pitch: number,
 	roll: number,
 	fov: number,
+	offsetX: number,
+	offsetY: number,
+	offsetZ: number,
 	onSelectModel: (index: number) -> (),
 	onPreviewModel: (index: number) -> (),
 }
@@ -53,6 +56,9 @@ local function ModelStrip(props: Props)
 			pitch = props.pitch,
 			roll = props.roll,
 			fov = props.fov,
+			offsetX = props.offsetX,
+			offsetY = props.offsetY,
+			offsetZ = props.offsetZ,
 			isActive = selectedSet[i] == true,
 			onSelect = function()
 				props.onSelectModel(i)

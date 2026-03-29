@@ -103,6 +103,9 @@ local function App(props: Props)
 			roll = state.roll,
 			fov = state.fov,
 			cameraDistance = state.cameraDistance,
+			cameraOffsetX = state.cameraOffsetX,
+			cameraOffsetY = state.cameraOffsetY,
+			cameraOffsetZ = state.cameraOffsetZ,
 			outline = state.outline,
 			dropShadow = state.dropShadow,
 			innerShadow = state.innerShadow,
@@ -132,6 +135,10 @@ local function App(props: Props)
 
 	local function isCtrlDown()
 		return isKeyDown(Enum.KeyCode.LeftControl) or isKeyDown(Enum.KeyCode.RightControl)
+	end
+
+	local function isShiftDown()
+		return isKeyDown(Enum.KeyCode.LeftShift) or isKeyDown(Enum.KeyCode.RightShift)
 	end
 
 	-- Render the currently selected models
@@ -358,6 +365,16 @@ local function App(props: Props)
 		})
 	end
 
+	-- Translate handler (Shift+drag)
+	local function onTranslate(dx: number, dy: number, dz: number)
+		dispatch({
+			type = Store.ACTIONS.SET_CAMERA_OFFSET,
+			x = state.cameraOffsetX + dx,
+			y = state.cameraOffsetY + dy,
+			z = state.cameraOffsetZ + dz,
+		})
+	end
+
 	-- Scroll-to-zoom handler
 	local function onScroll(direction: number)
 		local ctrlDown = isCtrlDown()
@@ -456,8 +473,13 @@ local function App(props: Props)
 						roll = state.roll,
 						fov = state.fov,
 						cameraDistance = state.cameraDistance,
+						offsetX = state.cameraOffsetX,
+						offsetY = state.cameraOffsetY,
+						offsetZ = state.cameraOffsetZ,
 						onTrackball = onTrackball,
+						onTranslate = onTranslate,
 						onScroll = onScroll,
+						isShiftDown = isShiftDown,
 					}),
 					modelStrip = e(ModelStrip, {
 						models = state.models,
@@ -466,6 +488,9 @@ local function App(props: Props)
 						pitch = state.pitch,
 						roll = state.roll,
 						fov = state.fov,
+						offsetX = state.cameraOffsetX,
+						offsetY = state.cameraOffsetY,
+						offsetZ = state.cameraOffsetZ,
 						onSelectModel = function(index)
 							local ctrlDown = isCtrlDown()
 							if ctrlDown then

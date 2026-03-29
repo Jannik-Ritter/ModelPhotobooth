@@ -243,6 +243,7 @@ local function Sidebar(props: Props)
 								pitch = preset.pitch,
 								fov = preset.fov,
 								roll = 0,
+								resetOffset = true,
 							})
 						end
 					end,
@@ -351,6 +352,88 @@ local function Sidebar(props: Props)
 					Size = UDim2.new(0, 26, 1, 0),
 					TextXAlignment = Enum.TextXAlignment.Right,
 					LayoutOrder = 3,
+				}),
+			}),
+			offset = e("Frame", {
+				Size = UDim2.new(1, 0, 0, 44),
+				BackgroundTransparency = 1,
+				LayoutOrder = 5,
+			}, {
+				outerLayout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Vertical,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 2),
+				}),
+				header = e(StudioComponents.Label, {
+					Text = "Offset",
+					Size = UDim2.new(1, 0, 0, 18),
+					LayoutOrder = 1,
+				}),
+				inputs = e("Frame", {
+					Size = UDim2.new(1, 0, 0, 22),
+					BackgroundTransparency = 1,
+					LayoutOrder = 2,
+				}, {
+					layout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 4),
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+					}),
+					labelX = e(StudioComponents.Label, {
+						Text = "X",
+						Size = UDim2.new(0, 10, 1, 0),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						LayoutOrder = 1,
+					}),
+					axisX = e(StudioComponents.NumericInput, {
+						Value = state.cameraOffsetX,
+						OnValidChanged = function(v)
+							props.dispatch({ type = A.SET_CAMERA_OFFSET, x = v, y = state.cameraOffsetY, z = state.cameraOffsetZ })
+						end,
+						Min = -500,
+						Max = 500,
+						Step = 0.1,
+						Arrows = false,
+						Size = UDim2.new(1 / 3, -18, 1, 0),
+						LayoutOrder = 2,
+					}),
+					labelY = e(StudioComponents.Label, {
+						Text = "Y",
+						Size = UDim2.new(0, 10, 1, 0),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						LayoutOrder = 3,
+					}),
+					axisY = e(StudioComponents.NumericInput, {
+						Value = state.cameraOffsetY,
+						OnValidChanged = function(v)
+							props.dispatch({ type = A.SET_CAMERA_OFFSET, x = state.cameraOffsetX, y = v, z = state.cameraOffsetZ })
+						end,
+						Min = -500,
+						Max = 500,
+						Step = 0.1,
+						Arrows = false,
+						Size = UDim2.new(1 / 3, -18, 1, 0),
+						LayoutOrder = 4,
+					}),
+					labelZ = e(StudioComponents.Label, {
+						Text = "Z",
+						Size = UDim2.new(0, 10, 1, 0),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						LayoutOrder = 5,
+					}),
+					axisZ = e(StudioComponents.NumericInput, {
+						Value = state.cameraOffsetZ,
+						OnValidChanged = function(v)
+							props.dispatch({ type = A.SET_CAMERA_OFFSET, x = state.cameraOffsetX, y = state.cameraOffsetY, z = v })
+						end,
+						Min = -500,
+						Max = 500,
+						Step = 0.1,
+						Arrows = false,
+						Size = UDim2.new(1 / 3, -18, 1, 0),
+						LayoutOrder = 6,
+					}),
 				}),
 			}),
 		}),
