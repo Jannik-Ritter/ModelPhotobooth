@@ -177,6 +177,7 @@ function postProcess.applyOuterGlow(
 	w: number,
 	h: number,
 	color: Color3,
+	size: number,
 	opacity: number,
 	blur: number
 ): buffer
@@ -188,6 +189,10 @@ function postProcess.applyOuterGlow(
 	local glowAlpha = buffer.create(w * h)
 	for i = 0, w * h - 1 do
 		buffer.writeu8(glowAlpha, i, buffer.readu8(buf, i * 4 + 3))
+	end
+	-- size spreads the glow outward; blur softens the edge
+	if size > 0 then
+		glowAlpha = postProcess.blurAlphaFlat(glowAlpha, w, h, math.max(1, size))
 	end
 	if blur > 0 then
 		glowAlpha = postProcess.blurAlphaFlat(glowAlpha, w, h, math.max(1, blur))
@@ -233,31 +238,35 @@ function postProcess.applyOuterGlow(
 	return out
 end
 
--- Chromatic aberration: radially shift R outward and B inward from the image centre.
--- `amount` is the maximum pixel displacement at the corners.
+-- Chromatic aberration: shift R and G in opposite diagonal directions by `amount` pixels.
+-- R gathers from the upper-left → appears to bleed toward the lower-right.
+-- G gathers from the lower-right → appears to bleed toward the upper-left.
+-- B is unchanged.
+-- Alpha is the max of the three source alphas so both channels can bleed into
+-- transparent areas just outside the model boundary on their respective sides.
 function postProcess.applyChromaticAberration(buf: buffer, w: number, h: number, amount: number): buffer
-	local cx = (w - 1) / 2
-	local cy = (h - 1) / 2
-	local maxRadius = math.sqrt(cx * cx + cy * cy)
-	local scale = if maxRadius > 0 then amount / maxRadius else 0
-
 	local out = buffer.create(w * h * 4)
-	buffer.copy(out, 0, buf, 0, w * h * 4)
 
-	local function readChannel(x: number, y: number, ch: number): number
+	local function readPixel(x: number, y: number): (number, number, number, number)
 		local sx = math.clamp(math.round(x), 0, w - 1)
 		local sy = math.clamp(math.round(y), 0, h - 1)
-		return buffer.readu8(buf, (sy * w + sx) * 4 + ch)
+		local o = (sy * w + sx) * 4
+		return buffer.readu8(buf, o), buffer.readu8(buf, o + 1), buffer.readu8(buf, o + 2), buffer.readu8(buf, o + 3)
 	end
 
 	for y = 0, h - 1 do
 		for x = 0, w - 1 do
 			local o = (y * w + x) * 4
-			local dx = (x - cx) * scale
-			local dy = (y - cy) * scale
-			-- R shifted outward, B shifted inward, G unchanged
-			buffer.writeu8(out, o, readChannel(x + dx, y + dy, 0))
-			buffer.writeu8(out, o + 2, readChannel(x - dx, y - dy, 2))
+			-- R from upper-left → bleeds to lower-right side of the model
+			-- G from lower-right → bleeds to upper-left side of the model
+			-- B unchanged
+			local rr, _, _, ra = readPixel(x - amount, y - amount)
+			local _, gg, _, ga = readPixel(x + amount, y + amount)
+			local _, _, bb, ba = readPixel(x, y)
+			buffer.writeu8(out, o,     rr)
+			buffer.writeu8(out, o + 1, gg)
+			buffer.writeu8(out, o + 2, bb)
+			buffer.writeu8(out, o + 3, math.max(ra, ga, ba))
 		end
 	end
 	return out

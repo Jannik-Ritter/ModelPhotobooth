@@ -1,5 +1,5 @@
 local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local React = require(Packages.react)
 
 type TrackballResult = {
 	onInputBegan: (rbx: GuiObject, input: InputObject) -> (),

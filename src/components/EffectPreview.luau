@@ -1,7 +1,7 @@
 local AssetService = game:GetService("AssetService")
 
 local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local postProcess = require(script.Parent.Parent.lib.postProcess)
@@ -18,6 +18,8 @@ type Props = {
 	outline: Store.OutlineState,
 	dropShadow: Store.EffectState,
 	innerShadow: Store.InnerShadowState,
+	outerGlow: Store.OuterGlowState,
+	chromaticAberration: Store.ChromaticAberrationState,
 	bgMode: string,
 	bgColor: Color3,
 	LayoutOrder: number?,
@@ -36,12 +38,12 @@ local function getPreviewColors(bgMode: string, bgColor: Color3): (Color3, Color
 
 	-- White export background -> white dot on black preview background
 	if isColorNear(bgColor, Color3.new(1, 1, 1)) then
-		return Color3.new(1, 1, 1), Color3.new(0, 0, 0)
+		return Color3.new(0, 0, 0), Color3.new(1, 1, 1)
 	end
 
 	-- Black export background (preset is near-black) -> black dot on white preview background
 	if isColorNear(bgColor, Color3.fromRGB(18, 18, 18)) or isColorNear(bgColor, Color3.new(0, 0, 0)) then
-		return Color3.new(0, 0, 0), Color3.new(1, 1, 1)
+		return Color3.new(1, 1, 1), Color3.new(0, 0, 0)
 	end
 
 	-- Fallback for any future custom color mode values
@@ -78,47 +80,64 @@ local function EffectPreview(props: Props)
 	-- Regenerate preview whenever any effect setting changes.
 	-- shallowMerge in the reducer creates new table identities on each dispatch,
 	-- so table identity comparison correctly detects any field change.
-	React.useEffect(function()
-		local buf = drawBaseCircle(dotColor)
+	React.useEffect(
+		function()
+			local buf = drawBaseCircle(dotColor)
 
-		-- Apply in the same order as captureOne: inner shadow → outline → drop shadow
-		if props.innerShadow.enabled then
-			buf = postProcess.applyInnerShadow(
-				buf, CANVAS, CANVAS,
-				props.innerShadow.color,
-				props.innerShadow.opacity,
-				props.innerShadow.distance,
-				props.innerShadow.blur,
-				props.innerShadow.angle
-			)
-		end
-		if props.outline.enabled and props.outline.thickness > 0 then
-			buf = postProcess.applyOutline(
-				buf, CANVAS, CANVAS,
-				props.outline.color,
-				props.outline.thickness
-			)
-		end
-		if props.dropShadow.enabled then
-			buf = postProcess.applyDropShadow(
-				buf, CANVAS, CANVAS,
-				props.dropShadow.color,
-				props.dropShadow.opacity,
-				props.dropShadow.distance,
-				props.dropShadow.blur,
-				props.dropShadow.angle
-			)
-		end
+			-- Apply in the same order as renderOne: inner shadow → outline → drop shadow
+			if props.innerShadow.enabled then
+				buf = postProcess.applyInnerShadow(
+					buf,
+					CANVAS,
+					CANVAS,
+					props.innerShadow.color,
+					props.innerShadow.opacity,
+					props.innerShadow.distance,
+					props.innerShadow.blur,
+					props.innerShadow.angle
+				)
+			end
+			if props.outline.enabled and props.outline.thickness > 0 then
+				buf = postProcess.applyOutline(buf, CANVAS, CANVAS, props.outline.color, props.outline.thickness)
+			end
+			if props.dropShadow.enabled then
+				buf = postProcess.applyDropShadow(
+					buf,
+					CANVAS,
+					CANVAS,
+					props.dropShadow.color,
+					props.dropShadow.opacity,
+					props.dropShadow.distance,
+					props.dropShadow.blur,
+					props.dropShadow.angle
+				)
+			end
+			if props.outerGlow.enabled then
+				buf = postProcess.applyOuterGlow(
+					buf,
+					CANVAS,
+					CANVAS,
+					props.outerGlow.color,
+					props.outerGlow.size,
+					props.outerGlow.opacity,
+					props.outerGlow.blur
+				)
+			end
+			if props.chromaticAberration.enabled then
+				buf = postProcess.applyChromaticAberration(buf, CANVAS, CANVAS, props.chromaticAberration.amount)
+			end
 
-		local img = AssetService:CreateEditableImage({ Size = Vector2.new(CANVAS, CANVAS) })
-		img:WritePixelsBuffer(Vector2.zero, Vector2.new(CANVAS, CANVAS), buf)
+			local img = AssetService:CreateEditableImage({ Size = Vector2.new(CANVAS, CANVAS) })
+			img:WritePixelsBuffer(Vector2.zero, Vector2.new(CANVAS, CANVAS), buf)
 
-		if imgRef.current then
-			imgRef.current:Destroy()
-		end
-		imgRef.current = img
-		setEditableImage(img)
-	end, { props.outline, props.dropShadow, props.innerShadow, dotColor } :: { any })
+			if imgRef.current then
+				imgRef.current:Destroy()
+			end
+			imgRef.current = img
+			setEditableImage(img)
+		end,
+		{ props.outline, props.dropShadow, props.innerShadow, props.outerGlow, props.chromaticAberration, dotColor } :: { any }
+	)
 
 	-- Destroy image on unmount (e.g. when section is collapsed)
 	React.useEffect(function()

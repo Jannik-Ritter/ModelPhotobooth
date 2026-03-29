@@ -1,11 +1,14 @@
 local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Store = require(script.Parent.Parent.Store)
 local CollapsibleSection = require(script.Parent.CollapsibleSection)
-local EffectRow = require(script.Parent.EffectRow)
 local EffectPreview = require(script.Parent.EffectPreview)
+local OutlineEffectRow = require(script.Parent.OutlineEffectRow)
+local ShadowEffectRow = require(script.Parent.ShadowEffectRow)
+local OuterGlowEffectRow = require(script.Parent.OuterGlowEffectRow)
+local ChromaticAberrationEffectRow = require(script.Parent.ChromaticAberrationEffectRow)
 
 local e = React.createElement
 
@@ -331,6 +334,8 @@ local function Sidebar(props: Props)
 				outline = state.outline,
 				dropShadow = state.dropShadow,
 				innerShadow = state.innerShadow,
+				outerGlow = state.outerGlow,
+				chromaticAberration = state.chromaticAberration,
 				bgMode = state.bgMode,
 				bgColor = state.bgColor,
 				LayoutOrder = 1,
@@ -344,8 +349,7 @@ local function Sidebar(props: Props)
 			onToggle = toggleSection("Outline"),
 			LayoutOrder = 4,
 		}, {
-			row = e(EffectRow, {
-				label = "Outline",
+			row = e(OutlineEffectRow, {
 				enabled = state.outline.enabled,
 				color = state.outline.color,
 				thickness = state.outline.thickness,
@@ -373,7 +377,7 @@ local function Sidebar(props: Props)
 			onToggle = toggleSection("DropShadow"),
 			LayoutOrder = 5,
 		}, {
-			row = e(EffectRow, {
+			row = e(ShadowEffectRow, {
 				label = "Shadow",
 				enabled = state.dropShadow.enabled,
 				color = state.dropShadow.color,
@@ -414,7 +418,7 @@ local function Sidebar(props: Props)
 			onToggle = toggleSection("InnerShadow"),
 			LayoutOrder = 6,
 		}, {
-			row = e(EffectRow, {
+			row = e(ShadowEffectRow, {
 				label = "Inner",
 				enabled = state.innerShadow.enabled,
 				color = state.innerShadow.color,
@@ -448,12 +452,68 @@ local function Sidebar(props: Props)
 			}),
 		}),
 
+		-- Outer Glow section
+		outerGlow = e(CollapsibleSection, {
+			title = "Outer Glow",
+			collapsed = isCollapsed("OuterGlow"),
+			onToggle = toggleSection("OuterGlow"),
+			LayoutOrder = 7,
+		}, {
+			row = e(OuterGlowEffectRow, {
+				enabled = state.outerGlow.enabled,
+				color = state.outerGlow.color,
+				size = state.outerGlow.size,
+				opacity = state.outerGlow.opacity,
+				blur = state.outerGlow.blur,
+				onToggle = function(v)
+					props.dispatch({ type = A.SET_OUTER_GLOW, value = { enabled = v } })
+				end,
+				onColorChanged = function(c)
+					props.dispatch({ type = A.SET_OUTER_GLOW, value = { color = c } })
+				end,
+				onSizeChanged = function(v)
+					props.dispatch({ type = A.SET_OUTER_GLOW, value = { size = v } })
+				end,
+				onOpacityChanged = function(v)
+					props.dispatch({ type = A.SET_OUTER_GLOW, value = { opacity = v } })
+				end,
+				onBlurChanged = function(v)
+					props.dispatch({ type = A.SET_OUTER_GLOW, value = { blur = v } })
+				end,
+				onColorPickerToggle = function()
+					local target = if state.colorPickerTarget == "glow" then nil else "glow"
+					props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+				end,
+				LayoutOrder = 1,
+			}),
+		}),
+
+		-- Chromatic Aberration section
+		chromaticAberration = e(CollapsibleSection, {
+			title = "Chromatic Aberration",
+			collapsed = isCollapsed("ChromaticAberration"),
+			onToggle = toggleSection("ChromaticAberration"),
+			LayoutOrder = 8,
+		}, {
+			row = e(ChromaticAberrationEffectRow, {
+				enabled = state.chromaticAberration.enabled,
+				amount = state.chromaticAberration.amount,
+				onToggle = function(v)
+					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { enabled = v } })
+				end,
+				onAmountChanged = function(v)
+					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { amount = v } })
+				end,
+				LayoutOrder = 1,
+			}),
+		}),
+
 		-- Export section
 		export = e(CollapsibleSection, {
 			title = "Export",
 			collapsed = isCollapsed("Export"),
 			onToggle = toggleSection("Export"),
-			LayoutOrder = 7,
+			LayoutOrder = 9,
 		}, {
 			size = e("Frame", {
 				Size = UDim2.new(1, 0, 0, DROPDOWN_ROW_HEIGHT),

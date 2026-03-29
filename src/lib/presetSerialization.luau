@@ -32,6 +32,26 @@ local function deserializeEffect(t)
 	}
 end
 
+local function serializeOuterGlow(g)
+	return {
+		enabled = g.enabled,
+		color = serializeColor(g.color),
+		size = g.size,
+		opacity = g.opacity,
+		blur = g.blur,
+	}
+end
+
+local function deserializeOuterGlow(t)
+	return {
+		enabled = t.enabled,
+		color = deserializeColor(t.color),
+		size = t.size or 10,
+		opacity = t.opacity,
+		blur = t.blur,
+	}
+end
+
 local function serializeOutline(o)
 	return {
 		enabled = o.enabled,
@@ -65,6 +85,8 @@ function Serialization.serialize(presets: { any }): { any }
 			outline = serializeOutline(preset.outline),
 			dropShadow = serializeEffect(preset.dropShadow),
 			innerShadow = serializeEffect(preset.innerShadow),
+			outerGlow = serializeOuterGlow(preset.outerGlow),
+			chromaticAberration = { enabled = preset.chromaticAberration.enabled, amount = preset.chromaticAberration.amount },
 		})
 	end
 	return result
@@ -85,6 +107,8 @@ function Serialization.deserialize(raw: { any }): { any }
 			outline = deserializeOutline(t.outline),
 			dropShadow = deserializeEffect(t.dropShadow),
 			innerShadow = deserializeEffect(t.innerShadow),
+			outerGlow = if t.outerGlow then deserializeOuterGlow(t.outerGlow) else { enabled = false, color = Color3.new(1, 1, 1), size = 10, opacity = 75, blur = 6 },
+			chromaticAberration = if t.chromaticAberration then { enabled = t.chromaticAberration.enabled, amount = t.chromaticAberration.amount } else { enabled = false, amount = 4 },
 		})
 	end
 	return result

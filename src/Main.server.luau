@@ -3,8 +3,8 @@ if not plugin then
 end
 
 local Packages = script.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
-local ReactRoblox = require(Packages._Index["jsdotlua_react-roblox@17.2.1"]["react-roblox"])
+local React = require(Packages.react)
+local ReactRoblox = require(Packages["react-roblox"])
 
 local App = require(script.Parent.App)
 

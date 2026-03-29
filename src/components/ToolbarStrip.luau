@@ -1,16 +1,16 @@
 local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local e = React.createElement
 
 type Props = {
-	capturing: boolean,
-	onCapture: () -> (),
-	onCaptureAll: () -> (),
+	rendering: boolean,
+	onRender: () -> (),
+	onRenderAll: () -> (),
 	onExport: () -> (),
-	captureDisabled: boolean,
-	captureAllDisabled: boolean,
+	renderDisabled: boolean,
+	renderAllDisabled: boolean,
 	exportDisabled: boolean,
 }
 
@@ -43,17 +43,17 @@ local function ToolbarStrip(props: Props)
 			padding = e("UIPadding", {
 				PaddingLeft = UDim.new(0, 8),
 			}),
-			capture = e(StudioComponents.Button, {
-				Text = "Capture Selected",
-				OnActivated = props.onCapture,
-				Disabled = props.captureDisabled or props.capturing,
+			render = e(StudioComponents.Button, {
+				Text = "Render Selected",
+				OnActivated = props.onRender,
+				Disabled = props.renderDisabled or props.rendering,
 				Size = UDim2.fromOffset(112, 24),
 				LayoutOrder = 1,
 			}),
-			captureAll = e(StudioComponents.Button, {
-				Text = "Capture All",
-				OnActivated = props.onCaptureAll,
-				Disabled = props.captureAllDisabled or props.capturing,
+			renderAll = e(StudioComponents.Button, {
+				Text = "Render All",
+				OnActivated = props.onRenderAll,
+				Disabled = props.renderAllDisabled or props.rendering,
 				Size = UDim2.fromOffset(82, 24),
 				LayoutOrder = 2,
 			}),

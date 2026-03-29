@@ -1,5 +1,5 @@
 local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
@@ -12,12 +12,12 @@ type Props = {
 	title: string,
 	onClose: () -> (),
 	onExport: () -> (),
-	onRecapture: () -> (),
+	onRerender: () -> (),
 	onPrev: (() -> ())?,
 	onNext: (() -> ())?,
 	hasPrev: boolean,
 	hasNext: boolean,
-	capturing: boolean,
+	rendering: boolean,
 }
 
 local function ImagePreviewModal(props: Props)
@@ -80,7 +80,7 @@ local function ImagePreviewModal(props: Props)
 						UseThemeColor = true,
 					},
 					OnActivated = props.onPrev,
-					Disabled = props.capturing,
+					Disabled = props.rendering,
 					Size = UDim2.fromOffset(32, 48),
 					AnchorPoint = Vector2.new(0, 0.5),
 					Position = UDim2.new(0, 8, 0.5, 0),
@@ -95,7 +95,7 @@ local function ImagePreviewModal(props: Props)
 						UseThemeColor = true,
 					},
 					OnActivated = props.onNext,
-					Disabled = props.capturing,
+					Disabled = props.rendering,
 					Size = UDim2.fromOffset(32, 48),
 					AnchorPoint = Vector2.new(1, 0.5),
 					Position = UDim2.new(1, -8, 0.5, 0),
@@ -124,17 +124,17 @@ local function ImagePreviewModal(props: Props)
 				padding = e("UIPadding", {
 					PaddingRight = UDim.new(0, 8),
 				}),
-				recapture = e(StudioComponents.Button, {
-					Text = "Recapture",
-					OnActivated = props.onRecapture,
-					Disabled = props.capturing,
+				rerender = e(StudioComponents.Button, {
+					Text = "Re-render",
+					OnActivated = props.onRerender,
+					Disabled = props.rendering,
 					Size = UDim2.fromOffset(80, 24),
 					LayoutOrder = 1,
 				}),
 				exportThis = e(StudioComponents.MainButton, {
 					Text = "Export This",
 					OnActivated = props.onExport,
-					Disabled = props.capturing,
+					Disabled = props.rendering,
 					Size = UDim2.fromOffset(84, 24),
 					LayoutOrder = 2,
 				}),

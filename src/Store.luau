@@ -12,8 +12,8 @@ Store.ACTIONS = {
 	SET_BG_COLOR = "SET_BG_COLOR",
 	SET_EXPORT_SIZE = "SET_EXPORT_SIZE",
 	SET_MODELS = "SET_MODELS",
-	SET_CAPTURE_STATUS = "SET_CAPTURE_STATUS",
-	SET_CAPTURING = "SET_CAPTURING",
+	SET_RENDER_STATUS = "SET_RENDER_STATUS",
+	SET_RENDERING = "SET_RENDERING",
 	SET_SELECTION = "SET_SELECTION",
 	TOGGLE_SECTION = "TOGGLE_SECTION",
 	SET_COLOR_PICKER_TARGET = "SET_COLOR_PICKER_TARGET",
@@ -26,11 +26,11 @@ Store.ACTIONS = {
 	SET_CHROMATIC_ABERRATION = "SET_CHROMATIC_ABERRATION",
 }
 
-export type CaptureStatus = "idle" | "pending" | "ok" | "fail"
+export type RenderStatus = "idle" | "pending" | "ok" | "fail"
 
 export type ModelEntry = {
 	instance: Instance,
-	status: CaptureStatus,
+	status: RenderStatus,
 	image: EditableImage?,
 	isExported: boolean,
 }
@@ -62,6 +62,7 @@ export type InnerShadowState = {
 export type OuterGlowState = {
 	enabled: boolean,
 	color: Color3,
+	size: number,
 	opacity: number,
 	blur: number,
 }
@@ -107,9 +108,9 @@ export type AppState = {
 	bgColor: Color3,
 	exportSize: number,
 	models: { ModelEntry },
-	capturing: boolean,
-	captureProgress: number,
-	captureTotal: number,
+	rendering: boolean,
+	renderProgress: number,
+	renderTotal: number,
 	selectedModelIndices: { number },
 	collapsedSections: { [string]: boolean },
 	colorPickerTarget: string?,
@@ -128,15 +129,15 @@ Store.DEFAULT_STATE = {
 	outline = { enabled = false, color = Color3.new(0, 0, 0), thickness = 3 },
 	dropShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 45 },
 	innerShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 225 },
-	outerGlow = { enabled = false, color = Color3.new(1, 1, 1), opacity = 75, blur = 8 },
+	outerGlow = { enabled = false, color = Color3.new(1, 1, 1), size = 10, opacity = 75, blur = 6 },
 	chromaticAberration = { enabled = false, amount = 4 },
 	bgMode = "transparent",
 	bgColor = Color3.new(1, 1, 1),
 	exportSize = 0,
 	models = {},
-	capturing = false,
-	captureProgress = 0,
-	captureTotal = 0,
+	rendering = false,
+	renderProgress = 0,
+	renderTotal = 0,
 	selectedModelIndices = {},
 	collapsedSections = {},
 	colorPickerTarget = nil,
@@ -169,8 +170,8 @@ local handlers = {
 	[A.SET_BG_COLOR] = require(actions.setBgColor),
 	[A.SET_EXPORT_SIZE] = require(actions.setExportSize),
 	[A.SET_MODELS] = require(actions.setModels),
-	[A.SET_CAPTURE_STATUS] = require(actions.setCaptureStatus),
-	[A.SET_CAPTURING] = require(actions.setCapturing),
+	[A.SET_RENDER_STATUS] = require(actions.setRenderStatus),
+	[A.SET_RENDERING] = require(actions.setRendering),
 	[A.SET_SELECTION] = require(actions.setSelection),
 	[A.TOGGLE_SECTION] = require(actions.toggleSection),
 	[A.SET_COLOR_PICKER_TARGET] = require(actions.setColorPickerTarget),

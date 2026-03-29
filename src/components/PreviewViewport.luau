@@ -1,5 +1,5 @@
 local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages._Index["jsdotlua_react@17.2.1"]["react"])
+local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local getCF = require(script.Parent.Parent.lib.getCF)
@@ -30,7 +30,7 @@ type Props = {
 	fov: number,
 	cameraDistance: number,
 	onTrackball: (dYaw: number, dPitch: number) -> (),
-	onScroll: (newFov: number) -> (),
+	onScroll: (direction: number) -> (),
 }
 
 local function PreviewViewport(props: Props)
@@ -103,7 +103,8 @@ local function PreviewViewport(props: Props)
 		yawRef.current = yawRef.current - dx * 0.5
 		pitchRef.current = pitchRef.current + dy * 0.5
 		if camRef.current and cloneRef.current then
-			camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, fovRef.current, distanceRef.current)
+			camRef.current.CFrame =
+				getCF(cloneRef.current, yawRef.current, pitchRef.current, fovRef.current, distanceRef.current)
 		end
 		props.onTrackball(-dx * 0.5, dy * 0.5)
 	end)
@@ -165,13 +166,9 @@ local function PreviewViewport(props: Props)
 				[React.Event.InputBegan] = trackball.onInputBegan,
 				[React.Event.InputChanged] = function(rbx, input)
 					if input.UserInputType == Enum.UserInputType.MouseWheel then
-						local newFov = math.clamp(fovRef.current + input.Position.Z * FOV_SCROLL_STEP, 1, 120)
-						fovRef.current = newFov
-						if camRef.current and cloneRef.current then
-							camRef.current.FieldOfView = math.max(newFov, 1)
-							camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, newFov, distanceRef.current)
-						end
-						props.onScroll(newFov)
+						--local newFov = math.clamp(fovRef.current + input.Position.Z * FOV_SCROLL_STEP, 1, 120)
+						local direction = math.sign(input.Position.Z)
+						props.onScroll(direction)
 					else
 						trackball.onInputChanged(rbx, input)
 					end
