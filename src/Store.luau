@@ -26,6 +26,16 @@ Store.ACTIONS = {
 	SET_CAMERA_DISTANCE = "SET_CAMERA_DISTANCE",
 	SET_OUTER_GLOW = "SET_OUTER_GLOW",
 	SET_CHROMATIC_ABERRATION = "SET_CHROMATIC_ABERRATION",
+	SET_ANIMATIONS = "SET_ANIMATIONS",
+	SET_ACTIVE_ANIMATION = "SET_ACTIVE_ANIMATION",
+	SET_ANIMATION_PLAYING = "SET_ANIMATION_PLAYING",
+	SET_ANIMATION_TIME = "SET_ANIMATION_TIME",
+	SET_ANIMATION_LENGTH = "SET_ANIMATION_LENGTH",
+}
+
+export type AnimationInfo = {
+	name: string,
+	animationId: string,
 }
 
 export type RenderStatus = "idle" | "pending" | "ok" | "fail"
@@ -131,6 +141,11 @@ export type AppState = {
 	previewModelIndex: number?,
 	presets: { PresetEntry },
 	nameInputModal: NameInputModalState?,
+	animations: { AnimationInfo },
+	activeAnimationIndex: number?,
+	animationPlaying: boolean,
+	animationTimePosition: number,
+	animationLength: number,
 }
 
 Store.DEFAULT_STATE = {
@@ -162,6 +177,11 @@ Store.DEFAULT_STATE = {
 	previewModelIndex = nil,
 	presets = {},
 	nameInputModal = nil,
+	animations = {},
+	activeAnimationIndex = nil,
+	animationPlaying = false,
+	animationTimePosition = 0,
+	animationLength = 0,
 }
 
 Store.PRESETS = {
@@ -202,6 +222,11 @@ local handlers = {
 	[A.SET_CAMERA_OFFSET] = require(actions.setCameraOffset),
 	[A.SET_OUTER_GLOW] = require(actions.setOuterGlow),
 	[A.SET_CHROMATIC_ABERRATION] = require(actions.setChromaticAberration),
+	[A.SET_ANIMATIONS] = require(actions.setAnimations),
+	[A.SET_ACTIVE_ANIMATION] = require(actions.setActiveAnimation),
+	[A.SET_ANIMATION_PLAYING] = require(actions.setAnimationPlaying),
+	[A.SET_ANIMATION_TIME] = require(actions.setAnimationTime),
+	[A.SET_ANIMATION_LENGTH] = require(actions.setAnimationLength),
 }
 
 function Store.reducer(state: AppState, action): AppState

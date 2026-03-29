@@ -1,9 +1,12 @@
+local RunService = game:GetService("RunService")
+
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local getCF = require(script.Parent.Parent.lib.getCF)
 local useTrackball = require(script.Parent.Parent.hooks.useTrackball)
+local AnimationPanel = require(script.Parent.AnimationPanel)
 
 local e = React.createElement
 
@@ -15,6 +18,11 @@ local function wrapSigned180(deg: number): number
 	end
 	return x
 end
+
+type AnimationInfo = {
+	name: string,
+	animationId: string,
+}
 
 type Props = {
 	entry: {
@@ -35,6 +43,16 @@ type Props = {
 	onTranslate: (dx: number, dy: number, dz: number) -> (),
 	onScroll: (direction: number) -> (),
 	isShiftDown: () -> boolean,
+	-- Animation
+	animations: { AnimationInfo },
+	activeAnimationIndex: number?,
+	animationPlaying: boolean,
+	animationTimePosition: number,
+	animationLength: number,
+	onSelectAnimation: (index: number?) -> (),
+	onSetPlaying: (playing: boolean) -> (),
+	onSetTimePosition: (time: number) -> (),
+	onSetLength: (length: number) -> (),
 }
 
 local function PreviewViewport(props: Props)
@@ -42,6 +60,10 @@ local function PreviewViewport(props: Props)
 	local vpRef = React.useRef(nil :: ViewportFrame?)
 	local camRef = React.useRef(nil :: Camera?)
 	local cloneRef = React.useRef(nil :: Instance?)
+	local worldModelRef = React.useRef(nil :: WorldModel?)
+	local trackRef = React.useRef(nil :: AnimationTrack?)
+	local animatorRef = React.useRef(nil :: Animator?)
+	local isPlayingRef = React.useRef(false)
 	local yawRef = React.useRef(props.yaw)
 	local pitchRef = React.useRef(props.pitch)
 	local fovRef = React.useRef(props.fov)
@@ -76,8 +98,11 @@ local function PreviewViewport(props: Props)
 	React.useEffect(function()
 		offsetZRef.current = props.offsetZ
 	end, { props.offsetZ })
+	React.useEffect(function()
+		isPlayingRef.current = props.animationPlaying
+	end, { props.animationPlaying })
 
-	-- Clone model into viewport
+	-- Clone model into viewport (using WorldModel for animation support)
 	local activeInstance = if props.entry then props.entry.instance else nil
 	React.useEffect(function()
 		local vp = vpRef.current
@@ -87,17 +112,24 @@ local function PreviewViewport(props: Props)
 		local cam = Instance.new("Camera")
 		cam.Parent = vp
 		vp.CurrentCamera = cam
+
+		local worldModel = Instance.new("WorldModel")
+		worldModel.Parent = vp
+
 		local clone
 		local ok = pcall(function()
 			clone = activeInstance:Clone()
-			clone.Parent = vp
+			clone.Parent = worldModel
 		end)
 		if not ok or not clone then
 			cam:Destroy()
+			worldModel:Destroy()
 			return
 		end
 		camRef.current = cam
 		cloneRef.current = clone
+		worldModelRef.current = worldModel
+
 		cam.FieldOfView = math.max(props.fov, 1)
 		cam.CFrame = getCF(
 			clone,
@@ -109,14 +141,155 @@ local function PreviewViewport(props: Props)
 			Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
 		)
 		return function()
-			cam:Destroy()
-			if clone then
-				clone:Destroy()
+			if trackRef.current then
+				trackRef.current:Stop()
+				trackRef.current:Destroy()
+				trackRef.current = nil
 			end
+			animatorRef.current = nil
+			cam:Destroy()
+			worldModel:Destroy()
 			camRef.current = nil
 			cloneRef.current = nil
+			worldModelRef.current = nil
 		end
 	end, { activeInstance } :: { any })
+
+	-- Load animation track when active animation changes
+	React.useEffect(function()
+		local clone = cloneRef.current
+		if not clone then
+			return
+		end
+
+		-- Clean up previous track
+		if trackRef.current then
+			trackRef.current:Stop()
+			trackRef.current:Destroy()
+			trackRef.current = nil
+		end
+
+		if not props.activeAnimationIndex then
+			animatorRef.current = nil
+			return
+		end
+
+		local animInfo = props.animations[props.activeAnimationIndex]
+		if not animInfo then
+			return
+		end
+
+		-- Find or create animator host
+		local animator
+		local humanoid = clone:FindFirstChildWhichIsA("Humanoid")
+		local animController = clone:FindFirstChildWhichIsA("AnimationController")
+		if humanoid then
+			animator = humanoid:FindFirstChildWhichIsA("Animator")
+			if not animator then
+				animator = Instance.new("Animator")
+				animator.Parent = humanoid
+			end
+		else
+			if not animController then
+				animController = Instance.new("AnimationController")
+				animController.Parent = clone
+			end
+			animator = animController:FindFirstChildWhichIsA("Animator")
+			if not animator then
+				animator = Instance.new("Animator")
+				animator.Parent = animController
+			end
+		end
+		animatorRef.current = animator
+
+		-- Load animation
+		local anim = Instance.new("Animation")
+		anim.AnimationId = animInfo.animationId
+		local track
+		local loadOk = pcall(function()
+			track = animator:LoadAnimation(anim)
+		end)
+		if not loadOk or not track then
+			return
+		end
+
+		track.Looped = true
+		track:Play(0)
+		track:AdjustSpeed(0) -- start paused
+		trackRef.current = track
+
+		-- Wait for length to become available, then report it
+		task.spawn(function()
+			local attempts = 0
+			while track.Length == 0 and attempts < 100 do
+				task.wait(0.05)
+				attempts += 1
+			end
+			if track.Length > 0 then
+				props.onSetLength(track.Length)
+			end
+		end)
+
+		return function()
+			if trackRef.current == track then
+				track:Stop()
+				track:Destroy()
+				trackRef.current = nil
+			end
+		end
+	end, { props.activeAnimationIndex, activeInstance } :: { any })
+
+	-- Control play/pause
+	React.useEffect(function()
+		local track = trackRef.current
+		if not track then
+			return
+		end
+		if props.animationPlaying then
+			track:AdjustSpeed(1)
+		else
+			track:AdjustSpeed(0)
+		end
+	end, { props.animationPlaying })
+
+	-- Scrub when paused (external time position change from scrubber)
+	React.useEffect(function()
+		local track = trackRef.current
+		if not track or isPlayingRef.current then
+			return
+		end
+		track.TimePosition = props.animationTimePosition
+		local humanoid = cloneRef.current:FindFirstChildWhichIsA("Humanoid")
+
+		local dt = 0.1
+		humanoid.Animator:StepAnimations(dt)
+	end, { props.animationTimePosition })
+
+	-- Heartbeat sync during playback
+	React.useEffect(function()
+		if not props.animationPlaying then
+			return
+		end
+		local track = trackRef.current
+		if not track then
+			return
+		end
+
+		local lastUpdate = 0
+		local conn = RunService.Heartbeat:Connect(function()
+			local now = tick()
+			if now - lastUpdate >= 0.05 then
+				lastUpdate = now
+				if track.IsPlaying then
+					props.onSetTimePosition(track.TimePosition)
+				end
+			end
+		end)
+
+		return function()
+			conn:Disconnect()
+		end
+	end, { props.animationPlaying })
 
 	-- Update camera when angles, distance, or offset change
 	React.useEffect(
@@ -151,11 +324,8 @@ local function PreviewViewport(props: Props)
 		local shiftHeld = props.isShiftDown()
 
 		if shiftHeld then
-			-- Translate: compute world-space delta along camera plane.
-			-- Scale = sz.Magnitude * 1.18 * distMult / vpWidth, so dragging the full
-			-- viewport width shifts the target by exactly one viewport-width of world space.
 			local clone = cloneRef.current
-			local szMag = 4 * math.sqrt(3) -- fallback: magnitude of Vector3(4,4,4)
+			local szMag = 4 * math.sqrt(3)
 			if clone then
 				pcall(function()
 					if clone:IsA("Model") then
@@ -189,7 +359,6 @@ local function PreviewViewport(props: Props)
 			end
 			props.onTranslate(delta.X, delta.Y, delta.Z)
 		else
-			-- Rotate
 			yawRef.current = yawRef.current - dx * 0.5
 			pitchRef.current = pitchRef.current + dy * 0.5
 			if camRef.current and cloneRef.current then
@@ -240,6 +409,21 @@ local function PreviewViewport(props: Props)
 		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
 	})
 
+	-- Animation panel overlay
+	local animPanel = nil
+	if #props.animations > 0 then
+		animPanel = e(AnimationPanel, {
+			animations = props.animations,
+			activeAnimationIndex = props.activeAnimationIndex,
+			playing = props.animationPlaying,
+			timePosition = props.animationTimePosition,
+			length = props.animationLength,
+			onSelectAnimation = props.onSelectAnimation,
+			onSetPlaying = props.onSetPlaying,
+			onSetTimePosition = props.onSetTimePosition,
+		})
+	end
+
 	return e("Frame", {
 		Size = UDim2.new(1, -220, 1, -96),
 		BackgroundTransparency = 1,
@@ -283,6 +467,7 @@ local function PreviewViewport(props: Props)
 			}),
 			empty = emptyLabel,
 			readout = readout,
+			animationPanel = animPanel,
 		}),
 	})
 end

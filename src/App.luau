@@ -31,11 +31,21 @@ local function App(props: Props)
 	local renderingRef = React.useRef(false)
 	local modelsRef = React.useRef(Store.DEFAULT_STATE.models)
 	local activeInputsRef = React.useRef({} :: { [Enum.KeyCode]: boolean })
+	local animationPlayingRef = React.useRef(false)
+	local activeAnimationIndexRef = React.useRef(nil :: number?)
 	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
 
 	-- Keep modelsRef current so the selection listener can access latest renders
 	React.useEffect(function()
 		modelsRef.current = state.models
+	end)
+
+	-- Keep animation refs current for input callbacks
+	React.useEffect(function()
+		animationPlayingRef.current = state.animationPlaying
+	end)
+	React.useEffect(function()
+		activeAnimationIndexRef.current = state.activeAnimationIndex
 	end)
 
 	-- Selection listener
@@ -96,6 +106,29 @@ local function App(props: Props)
 		props.plugin:SetSetting("presets", PresetSerialization.serialize(state.presets))
 	end, { state.presets } :: { any })
 
+	-- Active model entry (used for animation detection — defined early)
+	local focusedIndex = state.selectedModelIndices[#state.selectedModelIndices]
+	local activeEntry = if focusedIndex then state.models[focusedIndex] else nil
+	local activeInstance = if activeEntry then activeEntry.instance else nil
+
+	-- Detect animations in the active model
+	React.useEffect(function()
+		if not activeInstance then
+			dispatch({ type = Store.ACTIONS.SET_ANIMATIONS, value = {} })
+			return
+		end
+		local anims: { Store.AnimationInfo } = {}
+		for _, desc in ipairs(activeInstance:GetDescendants()) do
+			if desc:IsA("Animation") and desc.AnimationId ~= "" then
+				table.insert(anims, {
+					name = desc.Name,
+					animationId = desc.AnimationId,
+				})
+			end
+		end
+		dispatch({ type = Store.ACTIONS.SET_ANIMATIONS, value = anims })
+	end, { activeInstance } :: { any })
+
 	local function renderSettings()
 		return {
 			yaw = state.yaw,
@@ -114,12 +147,23 @@ local function App(props: Props)
 			bgMode = state.bgMode,
 			bgColor = state.bgColor,
 			exportSize = state.exportSize,
+			animationId = if state.activeAnimationIndex
+				then state.animations[state.activeAnimationIndex]
+					and state.animations[state.activeAnimationIndex].animationId
+				else nil,
+			animationTimePosition = state.animationTimePosition,
 		}
 	end
 
 	local function onWidgetInputBegan(_, input)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			activeInputsRef.current[input.KeyCode] = true
+			if input.KeyCode == Enum.KeyCode.Space and activeAnimationIndexRef.current then
+				dispatch({
+					type = Store.ACTIONS.SET_ANIMATION_PLAYING,
+					value = not animationPlayingRef.current,
+				})
+			end
 		end
 	end
 
@@ -141,6 +185,23 @@ local function App(props: Props)
 		return isKeyDown(Enum.KeyCode.LeftShift) or isKeyDown(Enum.KeyCode.RightShift)
 	end
 
+	-- Animation callbacks
+	local function onSelectAnimation(index: number?)
+		dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = index })
+	end
+
+	local function onSetAnimationPlaying(playing: boolean)
+		dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = playing })
+	end
+
+	local function onSetAnimationTimePosition(time: number)
+		dispatch({ type = Store.ACTIONS.SET_ANIMATION_TIME, value = time })
+	end
+
+	local function onSetAnimationLength(length: number)
+		dispatch({ type = Store.ACTIONS.SET_ANIMATION_LENGTH, value = length })
+	end
+
 	-- Render the currently selected models
 	local function startRenderSelected()
 		if renderingRef.current then
@@ -155,6 +216,10 @@ local function App(props: Props)
 		end
 		if #targets == 0 then
 			return
+		end
+		-- Pause animation playback during render
+		if animationPlayingRef.current then
+			dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = false })
 		end
 		renderingRef.current = true
 		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
@@ -192,6 +257,10 @@ local function App(props: Props)
 		end
 		if #targets == 0 then
 			return
+		end
+		-- Pause animation playback during render
+		if animationPlayingRef.current then
+			dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = false })
 		end
 		renderingRef.current = true
 		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
@@ -412,10 +481,6 @@ local function App(props: Props)
 		end
 	end
 
-	-- Active model entry (last in selection for preview)
-	local focusedIndex = state.selectedModelIndices[#state.selectedModelIndices]
-	local activeEntry = if focusedIndex then state.models[focusedIndex] else nil
-
 	-- Adjacent rendered models for prev/next navigation in preview modal
 	local prevRenderedIndex = nil
 	local nextRenderedIndex = nil
@@ -480,6 +545,15 @@ local function App(props: Props)
 						onTranslate = onTranslate,
 						onScroll = onScroll,
 						isShiftDown = isShiftDown,
+						animations = state.animations,
+						activeAnimationIndex = state.activeAnimationIndex,
+						animationPlaying = state.animationPlaying,
+						animationTimePosition = state.animationTimePosition,
+						animationLength = state.animationLength,
+						onSelectAnimation = onSelectAnimation,
+						onSetPlaying = onSetAnimationPlaying,
+						onSetTimePosition = onSetAnimationTimePosition,
+						onSetLength = onSetAnimationLength,
 					}),
 					modelStrip = e(ModelStrip, {
 						models = state.models,

@@ -26,6 +26,8 @@ type RenderSettings = {
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
+	animationId: string?,
+	animationTimePosition: number?,
 }
 
 local INTERVAL = 0.05
@@ -82,6 +84,47 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			tmpGui:Destroy()
 			reject("failed to clone model")
 			return
+		end
+
+		-- Pose animation if specified (requires WorldModel for animation playback)
+		if settings.animationId and settings.animationId ~= "" then
+			local wm = Instance.new("WorldModel")
+			wm.Parent = tmpVP
+			tmpClone.Parent = wm
+
+			local animator
+			local humanoid = tmpClone:FindFirstChildWhichIsA("Humanoid")
+			local animController = tmpClone:FindFirstChildWhichIsA("AnimationController")
+			if humanoid then
+				animator = humanoid:FindFirstChildWhichIsA("Animator")
+				if not animator then
+					animator = Instance.new("Animator")
+					animator.Parent = humanoid
+				end
+			else
+				if not animController then
+					animController = Instance.new("AnimationController")
+					animController.Parent = tmpClone
+				end
+				animator = animController:FindFirstChildWhichIsA("Animator")
+				if not animator then
+					animator = Instance.new("Animator")
+					animator.Parent = animController
+				end
+			end
+
+			local animObj = Instance.new("Animation")
+			animObj.AnimationId = settings.animationId
+			local track
+			local loadOk = pcall(function()
+				track = animator:LoadAnimation(animObj)
+			end)
+			if loadOk and track then
+				track:Play(0)
+				track:AdjustSpeed(0)
+				track.TimePosition = settings.animationTimePosition or 0
+				task.wait(0.1) -- let the pose apply
+			end
 		end
 
 		tmpCam.CFrame = getCF(
