@@ -3,12 +3,12 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Store = require(script.Parent.Parent.Store)
-local CollapsibleSection = require(script.Parent.CollapsibleSection)
-local EffectPreview = require(script.Parent.EffectPreview)
-local OutlineEffectRow = require(script.Parent.OutlineEffectRow)
-local ShadowEffectRow = require(script.Parent.ShadowEffectRow)
-local OuterGlowEffectRow = require(script.Parent.OuterGlowEffectRow)
-local ChromaticAberrationEffectRow = require(script.Parent.ChromaticAberrationEffectRow)
+local CollapsibleSection = require(script.Parent.effects.CollapsibleSection)
+local EffectPreview = require(script.Parent.effects.EffectPreview)
+local OutlineEffectRow = require(script.Parent.effects.OutlineEffectRow)
+local ShadowEffectRow = require(script.Parent.effects.ShadowEffectRow)
+local OuterGlowEffectRow = require(script.Parent.effects.OuterGlowEffectRow)
+local ChromaticAberrationEffectRow = require(script.Parent.effects.ChromaticAberrationEffectRow)
 
 local e = React.createElement
 

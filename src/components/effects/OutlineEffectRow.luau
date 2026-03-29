@@ -1,4 +1,4 @@
-local Packages = script.Parent.Parent.Parent.Packages
+local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 local EffectRowBase = require(script.Parent.EffectRowBase)

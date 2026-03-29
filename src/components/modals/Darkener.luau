@@ -3,7 +3,7 @@
 -- Pass children as the third argument to React.createElement.
 -- Pass onBackdropClick to dismiss on backdrop click; omit for non-dismissable overlays.
 
-local Packages = script.Parent.Parent.Parent.Packages
+local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 
 local e = React.createElement

@@ -1,4 +1,4 @@
-local Packages = script.Parent.Parent.Parent.Packages
+local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
@@ -8,22 +8,16 @@ local ModalCloseButton = require(script.Parent.ModalCloseButton)
 local e = React.createElement
 
 type Props = {
-	mode: "save" | "rename",
-	initialName: string?,
-	onConfirm: (name: string) -> (),
+	title: string,
+	message: string,
+	confirmLabel: string?,
+	onConfirm: () -> (),
 	onClose: () -> (),
 }
 
-local function NameInputModal(props: Props)
+local function ConfirmModal(props: Props)
 	local theme = StudioComponents.useTheme()
-	local text, setText = React.useState(props.initialName or "")
-
-	React.useEffect(function()
-		setText(props.initialName or "")
-	end, { props.initialName })
-
-	local title = if props.mode == "rename" then "Rename Preset" else "Save Preset"
-	local confirmLabel = if props.mode == "rename" then "Rename" else "Save"
+	local confirmLabel = props.confirmLabel or "Confirm"
 
 	-- Panel height: 32 (title) + 46 (body) + 40 (footer) = 118
 	return e(Darkener, {
@@ -55,7 +49,7 @@ local function NameInputModal(props: Props)
 					BorderSizePixel = 0,
 				}),
 				title = e("TextLabel", {
-					Text = title,
+					Text = props.title,
 					Size = UDim2.new(1, -40, 1, 0),
 					Position = UDim2.fromOffset(10, 0),
 					BackgroundTransparency = 1,
@@ -74,20 +68,16 @@ local function NameInputModal(props: Props)
 				BackgroundTransparency = 1,
 				LayoutOrder = 2,
 			}, {
-				input = e(StudioComponents.TextInput, {
-					Text = text,
-					PlaceholderText = "Preset name",
-					OnChanged = function(newText)
-						setText(newText)
-					end,
-					OnFocusLost = function(newText, enterPressed)
-						if enterPressed and #newText > 0 then
-							props.onConfirm(newText)
-							props.onClose()
-						end
-					end,
-					Size = UDim2.new(1, -16, 0, 22),
-					Position = UDim2.fromOffset(8, 12),
+				label = e("TextLabel", {
+					Text = props.message,
+					Size = UDim2.new(1, -16, 1, 0),
+					Position = UDim2.fromOffset(8, 0),
+					BackgroundTransparency = 1,
+					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
+					TextSize = 13,
+					Font = Enum.Font.SourceSans,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextWrapped = true,
 				}),
 			}),
 
@@ -115,10 +105,9 @@ local function NameInputModal(props: Props)
 				confirm = e(StudioComponents.MainButton, {
 					Text = confirmLabel,
 					OnActivated = function()
-						props.onConfirm(text)
+						props.onConfirm()
 						props.onClose()
 					end,
-					Disabled = #text == 0,
 					Size = UDim2.fromOffset(60, 24),
 					LayoutOrder = 2,
 				}),
@@ -127,4 +116,4 @@ local function NameInputModal(props: Props)
 	})
 end
 
-return NameInputModal
+return ConfirmModal

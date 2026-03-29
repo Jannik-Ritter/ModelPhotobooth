@@ -13,11 +13,11 @@ local ToolbarStrip = require(script.Parent.components.ToolbarStrip)
 local PreviewViewport = require(script.Parent.components.PreviewViewport)
 local ModelStrip = require(script.Parent.components.ModelStrip)
 local Sidebar = require(script.Parent.components.Sidebar)
-local ImagePreviewModal = require(script.Parent.components.ImagePreviewModal)
-local ColorPickerModal = require(script.Parent.components.ColorPickerModal)
-local NameInputModal = require(script.Parent.components.NameInputModal)
-local ConfirmModal = require(script.Parent.components.ConfirmModal)
-local Darkener = require(script.Parent.components.Darkener)
+local ImagePreviewModal = require(script.Parent.components.modals.ImagePreviewModal)
+local ColorPickerModal = require(script.Parent.components.modals.ColorPickerModal)
+local NameInputModal = require(script.Parent.components.modals.NameInputModal)
+local ConfirmModal = require(script.Parent.components.modals.ConfirmModal)
+local Darkener = require(script.Parent.components.modals.Darkener)
 
 local e = React.createElement
 local MPB_TAG = "_MPBIcon"

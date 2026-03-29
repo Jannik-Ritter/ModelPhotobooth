@@ -1,11 +1,11 @@
 local AssetService = game:GetService("AssetService")
 
-local Packages = script.Parent.Parent.Parent.Packages
+local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local postProcess = require(script.Parent.Parent.lib.postProcess)
-local Store = require(script.Parent.Parent.Store)
+local postProcess = require(script.Parent.Parent.Parent.lib.postProcess)
+local Store = require(script.Parent.Parent.Parent.Store)
 
 local e = React.createElement
 
