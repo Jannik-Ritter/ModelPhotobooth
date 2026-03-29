@@ -9,12 +9,15 @@ local UserInputService = game:GetService("UserInputService")
 local Store = require(script.Parent.Store)
 local captureOne = require(script.Parent.lib.captureOne)
 local exportAll = require(script.Parent.lib.exportAll)
+local PresetSerialization = require(script.Parent.lib.presetSerialization)
 local ToolbarStrip = require(script.Parent.components.ToolbarStrip)
 local PreviewViewport = require(script.Parent.components.PreviewViewport)
 local ModelStrip = require(script.Parent.components.ModelStrip)
 local Sidebar = require(script.Parent.components.Sidebar)
 local ImagePreviewModal = require(script.Parent.components.ImagePreviewModal)
 local ColorPickerModal = require(script.Parent.components.ColorPickerModal)
+local NameInputModal = require(script.Parent.components.NameInputModal)
+local ConfirmModal = require(script.Parent.components.ConfirmModal)
 local Darkener = require(script.Parent.components.Darkener)
 
 local e = React.createElement
@@ -28,6 +31,7 @@ local function App(props: Props)
 	local state, dispatch = React.useReducer(Store.reducer, Store.DEFAULT_STATE)
 	local capturingRef = React.useRef(false)
 	local modelsRef = React.useRef(Store.DEFAULT_STATE.models)
+	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
 
 	-- Keep modelsRef current so the selection listener can access latest captures
 	React.useEffect(function()
@@ -76,14 +80,33 @@ local function App(props: Props)
 		end
 	end, {} :: { any })
 
+	-- Load persisted presets on mount
+	React.useEffect(function()
+		local raw = props.plugin:GetSetting("presets")
+		if type(raw) == "table" then
+			local ok, result = pcall(PresetSerialization.deserialize, raw)
+			if ok then
+				dispatch({ type = Store.ACTIONS.SET_PRESETS, value = result })
+			end
+		end
+	end, {} :: { any })
+
+	-- Persist presets whenever they change
+	React.useEffect(function()
+		props.plugin:SetSetting("presets", PresetSerialization.serialize(state.presets))
+	end, { state.presets } :: { any })
+
 	local function captureSettings()
 		return {
 			yaw = state.yaw,
 			pitch = state.pitch,
 			fov = state.fov,
+			cameraDistance = state.cameraDistance,
 			outline = state.outline,
 			dropShadow = state.dropShadow,
 			innerShadow = state.innerShadow,
+			outerGlow = state.outerGlow,
+			chromaticAberration = state.chromaticAberration,
 			bgMode = state.bgMode,
 			bgColor = state.bgColor,
 			exportSize = state.exportSize,
@@ -222,6 +245,69 @@ local function App(props: Props)
 		end)
 	end
 
+	-- Preset handlers
+	local function openSaveModal()
+		dispatch({ type = Store.ACTIONS.SET_NAME_INPUT_MODAL, value = { mode = "save" } })
+	end
+
+	local function openRenameModal(index: number)
+		local preset = state.presets[index]
+		if not preset then return end
+		dispatch({
+			type = Store.ACTIONS.SET_NAME_INPUT_MODAL,
+			value = { mode = "rename", targetIndex = index, initialName = preset.name },
+		})
+	end
+
+	local function closeNameInputModal()
+		dispatch({ type = Store.ACTIONS.SET_NAME_INPUT_MODAL, value = nil })
+	end
+
+	local function confirmNameInput(name: string)
+		local modal = state.nameInputModal
+		if not modal then return end
+		local next = table.clone(state.presets)
+		if modal.mode == "save" then
+			table.insert(next, {
+				name = name,
+				yaw = state.yaw,
+				pitch = state.pitch,
+				fov = state.fov,
+				cameraDistance = state.cameraDistance,
+				bgMode = state.bgMode,
+				bgColor = state.bgColor,
+				exportSize = state.exportSize,
+				outline = state.outline,
+				dropShadow = state.dropShadow,
+				innerShadow = state.innerShadow,
+				outerGlow = state.outerGlow,
+				chromaticAberration = state.chromaticAberration,
+			})
+		elseif modal.mode == "rename" and modal.targetIndex then
+			local entry = table.clone(next[modal.targetIndex])
+			entry.name = name
+			next[modal.targetIndex] = entry
+		end
+		dispatch({ type = Store.ACTIONS.SET_PRESETS, value = next })
+	end
+
+	local function applyPreset(index: number)
+		local preset = state.presets[index]
+		if not preset then return end
+		dispatch({ type = Store.ACTIONS.APPLY_PRESET, value = preset })
+	end
+
+	local function deletePreset(index: number)
+		setDeleteConfirmIndex(index)
+	end
+
+	local function confirmDeletePreset()
+		if not deleteConfirmIndex then return end
+		local next = table.clone(state.presets)
+		table.remove(next, deleteConfirmIndex)
+		dispatch({ type = Store.ACTIONS.SET_PRESETS, value = next })
+	end
+
 	-- Trackball handler
 	local function onTrackball(dYaw: number, dPitch: number)
 		dispatch({
@@ -237,25 +323,11 @@ local function App(props: Props)
 		dispatch({ type = Store.ACTIONS.SET_FOV, value = newFov })
 	end
 
-	-- Status text
-	local capturedCount = 0
 	local totalCount = 0
 	for _, entry in ipairs(state.models) do
 		if not entry.isExported then
 			totalCount += 1
-			if entry.status == "ok" then
-				capturedCount += 1
-			end
 		end
-	end
-
-	local statusText
-	if capturedCount > 0 and not state.capturing then
-		statusText = `{capturedCount}/{totalCount} captured`
-	elseif #state.models > 0 then
-		statusText = `{#state.models} model(s) selected`
-	else
-		statusText = "Ready"
 	end
 
 	local hasCaptures = false
@@ -305,7 +377,6 @@ local function App(props: Props)
 			Size = UDim2.fromScale(1, 1),
 		}, {
 			toolbar = e(ToolbarStrip, {
-				statusText = statusText,
 				capturing = state.capturing,
 				onCapture = startCaptureSelected,
 				onCaptureAll = startCaptureAll,
@@ -324,6 +395,7 @@ local function App(props: Props)
 					yaw = state.yaw,
 					pitch = state.pitch,
 					fov = state.fov,
+					cameraDistance = state.cameraDistance,
 					onTrackball = onTrackball,
 					onScroll = onScroll,
 				}),
@@ -370,6 +442,10 @@ local function App(props: Props)
 				sidebar = e(Sidebar, {
 					state = state,
 					dispatch = dispatch,
+					onSavePreset = openSaveModal,
+					onApplyPreset = applyPreset,
+					onRenamePreset = openRenameModal,
+					onDeletePreset = deletePreset,
 				}),
 			}),
 			captureOverlay = if state.capturing and state.captureTotal > 0
@@ -440,6 +516,25 @@ local function App(props: Props)
 					end else nil,
 				})
 				else nil,
+			deleteConfirmModal = if deleteConfirmIndex ~= nil
+				then e(ConfirmModal, {
+					title = "Delete Preset",
+					message = `Delete "{if state.presets[deleteConfirmIndex] then state.presets[deleteConfirmIndex].name else ""}"?`,
+					confirmLabel = "Delete",
+					onConfirm = confirmDeletePreset,
+					onClose = function()
+						setDeleteConfirmIndex(nil)
+					end,
+				})
+				else nil,
+			nameInputModal = if state.nameInputModal ~= nil
+				then e(NameInputModal, {
+					mode = state.nameInputModal.mode,
+					initialName = state.nameInputModal.initialName,
+					onConfirm = confirmNameInput,
+					onClose = closeNameInputModal,
+				})
+				else nil,
 			colorPickerModal = if state.colorPickerTarget ~= nil
 				then (function()
 					local A = Store.ACTIONS
@@ -453,10 +548,14 @@ local function App(props: Props)
 						title = "Shadow Color"
 						color = state.dropShadow.color
 						action = A.SET_DROP_SHADOW
-					else
+					elseif target == "inner" then
 						title = "Inner Shadow Color"
 						color = state.innerShadow.color
 						action = A.SET_INNER_SHADOW
+					else
+						title = "Outer Glow Color"
+						color = state.outerGlow.color
+						action = A.SET_OUTER_GLOW
 					end
 					return e(ColorPickerModal, {
 						title = title,

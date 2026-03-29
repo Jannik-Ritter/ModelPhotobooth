@@ -18,6 +18,12 @@ Store.ACTIONS = {
 	TOGGLE_SECTION = "TOGGLE_SECTION",
 	SET_COLOR_PICKER_TARGET = "SET_COLOR_PICKER_TARGET",
 	SET_PREVIEW_IMAGE = "SET_PREVIEW_IMAGE",
+	SET_PRESETS = "SET_PRESETS",
+	SET_NAME_INPUT_MODAL = "SET_NAME_INPUT_MODAL",
+	APPLY_PRESET = "APPLY_PRESET",
+	SET_CAMERA_DISTANCE = "SET_CAMERA_DISTANCE",
+	SET_OUTER_GLOW = "SET_OUTER_GLOW",
+	SET_CHROMATIC_ABERRATION = "SET_CHROMATIC_ABERRATION",
 }
 
 export type CaptureStatus = "idle" | "pending" | "ok" | "fail"
@@ -53,13 +59,50 @@ export type InnerShadowState = {
 	angle: number,
 }
 
+export type OuterGlowState = {
+	enabled: boolean,
+	color: Color3,
+	opacity: number,
+	blur: number,
+}
+
+export type ChromaticAberrationState = {
+	enabled: boolean,
+	amount: number,
+}
+
+export type PresetEntry = {
+	name: string,
+	yaw: number,
+	pitch: number,
+	fov: number,
+	cameraDistance: number,
+	bgMode: string,
+	bgColor: Color3,
+	exportSize: number,
+	outline: OutlineState,
+	dropShadow: EffectState,
+	innerShadow: InnerShadowState,
+	outerGlow: OuterGlowState,
+	chromaticAberration: ChromaticAberrationState,
+}
+
+export type NameInputModalState = {
+	mode: "save" | "rename",
+	targetIndex: number?,
+	initialName: string?,
+}
+
 export type AppState = {
 	yaw: number,
 	pitch: number,
 	fov: number,
+	cameraDistance: number,
 	outline: OutlineState,
 	dropShadow: EffectState,
 	innerShadow: InnerShadowState,
+	outerGlow: OuterGlowState,
+	chromaticAberration: ChromaticAberrationState,
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
@@ -73,15 +116,20 @@ export type AppState = {
 	previewImage: EditableImage?,
 	previewTitle: string?,
 	previewModelIndex: number?,
+	presets: { PresetEntry },
+	nameInputModal: NameInputModalState?,
 }
 
 Store.DEFAULT_STATE = {
 	yaw = 180 + 45,
 	pitch = 25,
 	fov = 70,
+	cameraDistance = 1,
 	outline = { enabled = false, color = Color3.new(0, 0, 0), thickness = 3 },
 	dropShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 45 },
 	innerShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 225 },
+	outerGlow = { enabled = false, color = Color3.new(1, 1, 1), opacity = 75, blur = 8 },
+	chromaticAberration = { enabled = false, amount = 4 },
 	bgMode = "transparent",
 	bgColor = Color3.new(1, 1, 1),
 	exportSize = 0,
@@ -95,6 +143,8 @@ Store.DEFAULT_STATE = {
 	previewImage = nil,
 	previewTitle = nil,
 	previewModelIndex = nil,
+	presets = {},
+	nameInputModal = nil,
 }
 
 Store.PRESETS = {
@@ -125,6 +175,12 @@ local handlers = {
 	[A.TOGGLE_SECTION] = require(actions.toggleSection),
 	[A.SET_COLOR_PICKER_TARGET] = require(actions.setColorPickerTarget),
 	[A.SET_PREVIEW_IMAGE] = require(actions.setPreviewImage),
+	[A.SET_PRESETS] = require(actions.setPresets),
+	[A.SET_NAME_INPUT_MODAL] = require(actions.setNameInputModal),
+	[A.APPLY_PRESET] = require(actions.applyPreset),
+	[A.SET_CAMERA_DISTANCE] = require(actions.setCameraDistance),
+	[A.SET_OUTER_GLOW] = require(actions.setOuterGlow),
+	[A.SET_CHROMATIC_ABERRATION] = require(actions.setChromaticAberration),
 }
 
 function Store.reducer(state: AppState, action): AppState

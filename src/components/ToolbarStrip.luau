@@ -5,7 +5,6 @@ local StudioComponents = require(Packages.studiocomponents)
 local e = React.createElement
 
 type Props = {
-	statusText: string,
 	capturing: boolean,
 	onCapture: () -> (),
 	onCaptureAll: () -> (),
@@ -30,15 +29,8 @@ local function ToolbarStrip(props: Props)
 			BorderSizePixel = 0,
 			ZIndex = 2,
 		}),
-		status = e(StudioComponents.Label, {
-			Text = props.statusText,
-			Size = UDim2.new(1, -296, 1, 0),
-			Position = UDim2.fromOffset(10, 0),
-			TextXAlignment = Enum.TextXAlignment.Left,
-		}),
 		buttons = e("Frame", {
-			Size = UDim2.new(0, 296, 1, 0),
-			Position = UDim2.new(1, -296, 0, 0),
+			Size = UDim2.fromScale(1, 1),
 			BackgroundTransparency = 1,
 		}, {
 			layout = e("UIListLayout", {
@@ -46,10 +38,10 @@ local function ToolbarStrip(props: Props)
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				Padding = UDim.new(0, 6),
 				VerticalAlignment = Enum.VerticalAlignment.Center,
-				HorizontalAlignment = Enum.HorizontalAlignment.Right,
+				HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			}),
 			padding = e("UIPadding", {
-				PaddingRight = UDim.new(0, 8),
+				PaddingLeft = UDim.new(0, 8),
 			}),
 			capture = e(StudioComponents.Button, {
 				Text = "Capture Selected",

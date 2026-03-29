@@ -28,6 +28,7 @@ type Props = {
 	yaw: number,
 	pitch: number,
 	fov: number,
+	cameraDistance: number,
 	onTrackball: (dYaw: number, dPitch: number) -> (),
 	onScroll: (newFov: number) -> (),
 }
@@ -40,6 +41,7 @@ local function PreviewViewport(props: Props)
 	local yawRef = React.useRef(props.yaw)
 	local pitchRef = React.useRef(props.pitch)
 	local fovRef = React.useRef(props.fov)
+	local distanceRef = React.useRef(props.cameraDistance)
 
 	-- Keep refs in sync
 	React.useEffect(function()
@@ -51,6 +53,9 @@ local function PreviewViewport(props: Props)
 	React.useEffect(function()
 		fovRef.current = props.fov
 	end, { props.fov })
+	React.useEffect(function()
+		distanceRef.current = props.cameraDistance
+	end, { props.cameraDistance })
 
 	-- Clone model into viewport
 	local activeInstance = if props.entry then props.entry.instance else nil
@@ -74,7 +79,7 @@ local function PreviewViewport(props: Props)
 		camRef.current = cam
 		cloneRef.current = clone
 		cam.FieldOfView = math.max(props.fov, 1)
-		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov)
+		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov, props.cameraDistance)
 		return function()
 			cam:Destroy()
 			if clone then
@@ -85,20 +90,20 @@ local function PreviewViewport(props: Props)
 		end
 	end, { activeInstance } :: { any })
 
-	-- Update camera when angles change
+	-- Update camera when angles or distance change
 	React.useEffect(function()
 		if camRef.current and cloneRef.current then
 			camRef.current.FieldOfView = math.max(props.fov, 1)
-			camRef.current.CFrame = getCF(cloneRef.current, props.yaw, props.pitch, props.fov)
+			camRef.current.CFrame = getCF(cloneRef.current, props.yaw, props.pitch, props.fov, props.cameraDistance)
 		end
-	end, { props.yaw, props.pitch, props.fov } :: { any })
+	end, { props.yaw, props.pitch, props.fov, props.cameraDistance } :: { any })
 
 	-- Trackball
 	local trackball = useTrackball(function(dx: number, dy: number)
 		yawRef.current = yawRef.current - dx * 0.5
 		pitchRef.current = pitchRef.current + dy * 0.5
 		if camRef.current and cloneRef.current then
-			camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, props.fov)
+			camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, fovRef.current, distanceRef.current)
 		end
 		props.onTrackball(-dx * 0.5, dy * 0.5)
 	end)
@@ -164,7 +169,7 @@ local function PreviewViewport(props: Props)
 						fovRef.current = newFov
 						if camRef.current and cloneRef.current then
 							camRef.current.FieldOfView = math.max(newFov, 1)
-							camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, newFov)
+							camRef.current.CFrame = getCF(cloneRef.current, yawRef.current, pitchRef.current, newFov, distanceRef.current)
 						end
 						props.onScroll(newFov)
 					else

@@ -10,9 +10,12 @@ type CaptureSettings = {
 	yaw: number,
 	pitch: number,
 	fov: number,
+	cameraDistance: number,
 	outline: { enabled: boolean, color: Color3, thickness: number },
 	dropShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	innerShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
+	outerGlow: { enabled: boolean, color: Color3, opacity: number, blur: number },
+	chromaticAberration: { enabled: boolean, amount: number },
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
@@ -61,7 +64,7 @@ local function captureOne(model: Instance, settings: CaptureSettings): EditableI
 		return nil
 	end
 
-	tmpCam.CFrame = getCF(tmpClone, settings.yaw, settings.pitch, settings.fov)
+	tmpCam.CFrame = getCF(tmpClone, settings.yaw, settings.pitch, settings.fov, settings.cameraDistance)
 	task.wait(INTERVAL)
 
 	local vp = tmpVP.AbsolutePosition
@@ -180,6 +183,19 @@ local function captureOne(model: Instance, settings: CaptureSettings): EditableI
 			settings.dropShadow.blur,
 			settings.dropShadow.angle
 		)
+	end
+	if settings.outerGlow.enabled then
+		out = postProcess.applyOuterGlow(
+			out,
+			w,
+			h,
+			settings.outerGlow.color,
+			settings.outerGlow.opacity,
+			settings.outerGlow.blur
+		)
+	end
+	if settings.chromaticAberration.enabled then
+		out = postProcess.applyChromaticAberration(out, w, h, settings.chromaticAberration.amount)
 	end
 
 	local outEI = AssetService:CreateEditableImage({ Size = Vector2.new(w, h) })

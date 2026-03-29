@@ -35,6 +35,9 @@ local function ImagePreviewModal(props: Props)
 			Active = true,
 			ClipsDescendants = true,
 		}, {
+			ratioConstraint = e("UIAspectRatioConstraint", {
+				AspectRatio = 1,
+			}),
 			titleBar = e("Frame", {
 				Size = UDim2.new(1, 0, 0, 32),
 				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
