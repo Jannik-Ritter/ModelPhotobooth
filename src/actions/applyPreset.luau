@@ -5,6 +5,7 @@ return function(state, action)
 	return shallowMerge(state, {
 		yaw = preset.yaw,
 		pitch = preset.pitch,
+		roll = preset.roll or 0,
 		fov = preset.fov,
 		cameraDistance = preset.cameraDistance,
 		bgMode = preset.bgMode,

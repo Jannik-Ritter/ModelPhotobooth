@@ -77,6 +77,7 @@ function Serialization.serialize(presets: { any }): { any }
 			name = preset.name,
 			yaw = preset.yaw,
 			pitch = preset.pitch,
+			roll = preset.roll,
 			fov = preset.fov,
 			cameraDistance = preset.cameraDistance,
 			bgMode = preset.bgMode,
@@ -86,7 +87,12 @@ function Serialization.serialize(presets: { any }): { any }
 			dropShadow = serializeEffect(preset.dropShadow),
 			innerShadow = serializeEffect(preset.innerShadow),
 			outerGlow = serializeOuterGlow(preset.outerGlow),
-			chromaticAberration = { enabled = preset.chromaticAberration.enabled, amount = preset.chromaticAberration.amount },
+			chromaticAberration = {
+				enabled = preset.chromaticAberration.enabled,
+				distance = preset.chromaticAberration.distance,
+				opacity = preset.chromaticAberration.opacity,
+				angle = preset.chromaticAberration.angle,
+			},
 		})
 	end
 	return result
@@ -99,6 +105,7 @@ function Serialization.deserialize(raw: { any }): { any }
 			name = t.name,
 			yaw = t.yaw,
 			pitch = t.pitch,
+			roll = t.roll or 0,
 			fov = t.fov,
 			cameraDistance = t.cameraDistance or 1,
 			bgMode = t.bgMode,
@@ -108,7 +115,14 @@ function Serialization.deserialize(raw: { any }): { any }
 			dropShadow = deserializeEffect(t.dropShadow),
 			innerShadow = deserializeEffect(t.innerShadow),
 			outerGlow = if t.outerGlow then deserializeOuterGlow(t.outerGlow) else { enabled = false, color = Color3.new(1, 1, 1), size = 10, opacity = 75, blur = 6 },
-			chromaticAberration = if t.chromaticAberration then { enabled = t.chromaticAberration.enabled, amount = t.chromaticAberration.amount } else { enabled = false, amount = 4 },
+			chromaticAberration = if t.chromaticAberration
+				then {
+					enabled = t.chromaticAberration.enabled,
+					distance = t.chromaticAberration.distance or t.chromaticAberration.amount or 4,
+					opacity = t.chromaticAberration.opacity or 100,
+					angle = t.chromaticAberration.angle or 45,
+				}
+				else { enabled = false, distance = 4, opacity = 100, angle = 45 },
 		})
 	end
 	return result

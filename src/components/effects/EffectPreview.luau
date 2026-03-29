@@ -83,49 +83,13 @@ local function EffectPreview(props: Props)
 	React.useEffect(
 		function()
 			local buf = drawBaseCircle(dotColor)
-
-			-- Apply in the same order as renderOne: inner shadow → outline → drop shadow
-			if props.innerShadow.enabled then
-				buf = postProcess.applyInnerShadow(
-					buf,
-					CANVAS,
-					CANVAS,
-					props.innerShadow.color,
-					props.innerShadow.opacity,
-					props.innerShadow.distance,
-					props.innerShadow.blur,
-					props.innerShadow.angle
-				)
-			end
-			if props.outline.enabled and props.outline.thickness > 0 then
-				buf = postProcess.applyOutline(buf, CANVAS, CANVAS, props.outline.color, props.outline.thickness)
-			end
-			if props.dropShadow.enabled then
-				buf = postProcess.applyDropShadow(
-					buf,
-					CANVAS,
-					CANVAS,
-					props.dropShadow.color,
-					props.dropShadow.opacity,
-					props.dropShadow.distance,
-					props.dropShadow.blur,
-					props.dropShadow.angle
-				)
-			end
-			if props.outerGlow.enabled then
-				buf = postProcess.applyOuterGlow(
-					buf,
-					CANVAS,
-					CANVAS,
-					props.outerGlow.color,
-					props.outerGlow.size,
-					props.outerGlow.opacity,
-					props.outerGlow.blur
-				)
-			end
-			if props.chromaticAberration.enabled then
-				buf = postProcess.applyChromaticAberration(buf, CANVAS, CANVAS, props.chromaticAberration.amount)
-			end
+			buf = postProcess.applyImageEffects(buf, CANVAS, CANVAS, {
+				innerShadow = props.innerShadow,
+				outline = props.outline,
+				dropShadow = props.dropShadow,
+				chromaticAberration = props.chromaticAberration,
+				outerGlow = props.outerGlow,
+			})
 
 			local img = AssetService:CreateEditableImage({ Size = Vector2.new(CANVAS, CANVAS) })
 			img:WritePixelsBuffer(Vector2.zero, Vector2.new(CANVAS, CANVAS), buf)

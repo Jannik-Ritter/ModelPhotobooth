@@ -12,13 +12,14 @@ local postProcess = require(script.Parent.postProcess)
 type RenderSettings = {
 	yaw: number,
 	pitch: number,
+	roll: number,
 	fov: number,
 	cameraDistance: number,
 	outline: { enabled: boolean, color: Color3, thickness: number },
 	dropShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	innerShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	outerGlow: { enabled: boolean, color: Color3, size: number, opacity: number, blur: number },
-	chromaticAberration: { enabled: boolean, amount: number },
+	chromaticAberration: { enabled: boolean, distance: number, opacity: number, angle: number },
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
@@ -35,7 +36,13 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			return
 		end
 		local scale = scaleOrErr
-		local CAPSIZE = math.floor(1020 / math.max(scale.X, scale.Y))
+		-- When a fixed export size is set, cap capture + effects at that resolution so we do not
+		-- render ~1020px and downscale at the end. Native (exportSize 0) still uses full cap.
+		local maxPx = 1020
+		if settings.exportSize > 0 then
+			maxPx = math.min(settings.exportSize, 1020)
+		end
+		local CAPSIZE = math.floor(maxPx / math.max(scale.X, scale.Y))
 
 		local tmpGui = Instance.new("ScreenGui")
 		tmpGui.Name = "_MPhotoCapture"
@@ -74,14 +81,15 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			return
 		end
 
-		tmpCam.CFrame = getCF(tmpClone, settings.yaw, settings.pitch, settings.fov, settings.cameraDistance)
+		tmpCam.CFrame =
+			getCF(tmpClone, settings.yaw, settings.pitch, settings.fov, settings.cameraDistance, settings.roll)
 		task.wait(INTERVAL)
 
 		local vp = tmpVP.AbsolutePosition
 		-- Clamp to >= 1: ReadPixelsBuffer requires position.X and position.Y > 0
 		local cropPos = Vector2.new(math.max(1, math.floor(vp.X * scale.X)), math.max(1, math.floor(vp.Y * scale.Y)))
 		local cropSz =
-			Vector2.new(math.min(math.floor(CAPSIZE * scale.X), 1020), math.min(math.floor(CAPSIZE * scale.Y), 1020))
+			Vector2.new(math.min(math.floor(CAPSIZE * scale.X), maxPx), math.min(math.floor(CAPSIZE * scale.Y), maxPx))
 
 		local function snap(bg: Color3)
 			return Promise.new(function(res, rej)
@@ -171,50 +179,14 @@ local function renderOne(model: Instance, settings: RenderSettings)
 
 		local w, h = cropSz.X, cropSz.Y
 
-		-- Apply effects in order: inner shadow → outline → drop shadow → outer glow → chromatic aberration
-		-- Must run on the raw transparent RGBA before any background composite so effects that
-		-- depend on the alpha channel (outer glow, drop shadow) can read the model boundary.
-		if settings.innerShadow.enabled then
-			out = postProcess.applyInnerShadow(
-				out,
-				w,
-				h,
-				settings.innerShadow.color,
-				settings.innerShadow.opacity,
-				settings.innerShadow.distance,
-				settings.innerShadow.blur,
-				settings.innerShadow.angle
-			)
-		end
-		if settings.outline.enabled and settings.outline.thickness > 0 then
-			out = postProcess.applyOutline(out, w, h, settings.outline.color, settings.outline.thickness)
-		end
-		if settings.dropShadow.enabled then
-			out = postProcess.applyDropShadow(
-				out,
-				w,
-				h,
-				settings.dropShadow.color,
-				settings.dropShadow.opacity,
-				settings.dropShadow.distance,
-				settings.dropShadow.blur,
-				settings.dropShadow.angle
-			)
-		end
-		if settings.outerGlow.enabled then
-			out = postProcess.applyOuterGlow(
-				out,
-				w,
-				h,
-				settings.outerGlow.color,
-				settings.outerGlow.size,
-				settings.outerGlow.opacity,
-				settings.outerGlow.blur
-			)
-		end
-		if settings.chromaticAberration.enabled then
-			out = postProcess.applyChromaticAberration(out, w, h, settings.chromaticAberration.amount)
-		end
+		-- Raw transparent RGBA; alpha-dependent effects run before background composite.
+		out = postProcess.applyImageEffects(out, w, h, {
+			innerShadow = settings.innerShadow,
+			outline = settings.outline,
+			dropShadow = settings.dropShadow,
+			chromaticAberration = settings.chromaticAberration,
+			outerGlow = settings.outerGlow,
+		})
 
 		-- Composite onto background color after effects so the alpha channel is intact
 		-- while effects run (outer glow and drop shadow need it to find the model boundary).
@@ -236,10 +208,26 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		local outEI = AssetService:CreateEditableImage({ Size = Vector2.new(w, h) })
 		outEI:WritePixelsBuffer(Vector2.zero, Vector2.new(w, h), out)
 
-		if settings.exportSize > 0 then
-			pcall(function()
-				outEI:Resize(Vector2.new(settings.exportSize, settings.exportSize))
+		-- Final step only when output size still differs (e.g. 1024 preset vs 1020px capture cap, or
+		-- rounding made crop non-square). Usually skipped when export size matched maxPx above.
+		local target = settings.exportSize
+		if target > 0 and (w ~= target or h ~= target) then
+			local scaledEI = AssetService:CreateEditableImage({ Size = Vector2.new(target, target) })
+			local okDraw = pcall(function()
+				-- Pivot defaults to image center; place pivot at output center.
+				scaledEI:DrawImageTransformed(
+					Vector2.new(target / 2, target / 2),
+					Vector2.new(target / w, target / h),
+					0,
+					outEI
+				)
 			end)
+			if okDraw then
+				outEI:Destroy()
+				outEI = scaledEI
+			else
+				scaledEI:Destroy()
+			end
 		end
 
 		resolve(outEI)

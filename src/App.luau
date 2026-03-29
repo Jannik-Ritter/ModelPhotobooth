@@ -100,6 +100,7 @@ local function App(props: Props)
 		return {
 			yaw = state.yaw,
 			pitch = state.pitch,
+			roll = state.roll,
 			fov = state.fov,
 			cameraDistance = state.cameraDistance,
 			outline = state.outline,
@@ -306,6 +307,7 @@ local function App(props: Props)
 				name = name,
 				yaw = state.yaw,
 				pitch = state.pitch,
+				roll = state.roll,
 				fov = state.fov,
 				cameraDistance = state.cameraDistance,
 				bgMode = state.bgMode,
@@ -451,6 +453,7 @@ local function App(props: Props)
 						entry = activeEntry,
 						yaw = state.yaw,
 						pitch = state.pitch,
+						roll = state.roll,
 						fov = state.fov,
 						cameraDistance = state.cameraDistance,
 						onTrackball = onTrackball,
@@ -461,6 +464,7 @@ local function App(props: Props)
 						selectedModelIndices = state.selectedModelIndices,
 						yaw = state.yaw,
 						pitch = state.pitch,
+						roll = state.roll,
 						fov = state.fov,
 						onSelectModel = function(index)
 							local ctrlDown = isCtrlDown()

@@ -25,6 +25,7 @@ type Props = {
 	}?,
 	yaw: number,
 	pitch: number,
+	roll: number,
 	fov: number,
 	cameraDistance: number,
 	onTrackball: (dYaw: number, dPitch: number) -> (),
@@ -40,6 +41,7 @@ local function PreviewViewport(props: Props)
 	local pitchRef = React.useRef(props.pitch)
 	local fovRef = React.useRef(props.fov)
 	local distanceRef = React.useRef(props.cameraDistance)
+	local rollRef = React.useRef(props.roll)
 
 	-- Keep refs in sync
 	React.useEffect(function()
@@ -48,6 +50,9 @@ local function PreviewViewport(props: Props)
 	React.useEffect(function()
 		pitchRef.current = props.pitch
 	end, { props.pitch })
+	React.useEffect(function()
+		rollRef.current = props.roll
+	end, { props.roll })
 	React.useEffect(function()
 		fovRef.current = props.fov
 	end, { props.fov })
@@ -77,7 +82,7 @@ local function PreviewViewport(props: Props)
 		camRef.current = cam
 		cloneRef.current = clone
 		cam.FieldOfView = math.max(props.fov, 1)
-		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov, props.cameraDistance)
+		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov, props.cameraDistance, props.roll)
 		return function()
 			cam:Destroy()
 			if clone then
@@ -92,17 +97,30 @@ local function PreviewViewport(props: Props)
 	React.useEffect(function()
 		if camRef.current and cloneRef.current then
 			camRef.current.FieldOfView = math.max(props.fov, 1)
-			camRef.current.CFrame = getCF(cloneRef.current, props.yaw, props.pitch, props.fov, props.cameraDistance)
+			camRef.current.CFrame = getCF(
+				cloneRef.current,
+				props.yaw,
+				props.pitch,
+				props.fov,
+				props.cameraDistance,
+				props.roll
+			)
 		end
-	end, { props.yaw, props.pitch, props.fov, props.cameraDistance } :: { any })
+	end, { props.yaw, props.pitch, props.fov, props.cameraDistance, props.roll } :: { any })
 
 	-- Trackball
 	local trackball = useTrackball(function(dx: number, dy: number)
 		yawRef.current = yawRef.current - dx * 0.5
 		pitchRef.current = pitchRef.current + dy * 0.5
 		if camRef.current and cloneRef.current then
-			camRef.current.CFrame =
-				getCF(cloneRef.current, yawRef.current, pitchRef.current, fovRef.current, distanceRef.current)
+			camRef.current.CFrame = getCF(
+				cloneRef.current,
+				yawRef.current,
+				pitchRef.current,
+				fovRef.current,
+				distanceRef.current,
+				rollRef.current
+			)
 		end
 		props.onTrackball(-dx * 0.5, dy * 0.5)
 	end)
@@ -120,8 +138,13 @@ local function PreviewViewport(props: Props)
 
 	-- Angle readout
 	local readout = e("TextLabel", {
-		Text = string.format("%.0f\u{00B0}  %.0f\u{00B0}", wrapSigned180(props.yaw), wrapSigned180(props.pitch)),
-		Size = UDim2.new(0, 80, 0, 20),
+		Text = string.format(
+			"%.0f\u{00B0}  %.0f\u{00B0}  R%.0f\u{00B0}",
+			wrapSigned180(props.yaw),
+			wrapSigned180(props.pitch),
+			wrapSigned180(props.roll)
+		),
+		Size = UDim2.new(0, 120, 0, 20),
 		Position = UDim2.new(0, 8, 1, -28),
 		BackgroundColor3 = Color3.new(0, 0, 0),
 		BackgroundTransparency = 0.5,

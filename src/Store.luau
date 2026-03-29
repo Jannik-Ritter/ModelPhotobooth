@@ -4,6 +4,7 @@ Store.ACTIONS = {
 	SET_CAMERA = "SET_CAMERA",
 	SET_YAW = "SET_YAW",
 	SET_PITCH = "SET_PITCH",
+	SET_ROLL = "SET_ROLL",
 	SET_FOV = "SET_FOV",
 	SET_OUTLINE = "SET_OUTLINE",
 	SET_DROP_SHADOW = "SET_DROP_SHADOW",
@@ -69,13 +70,16 @@ export type OuterGlowState = {
 
 export type ChromaticAberrationState = {
 	enabled: boolean,
-	amount: number,
+	distance: number,
+	opacity: number,
+	angle: number,
 }
 
 export type PresetEntry = {
 	name: string,
 	yaw: number,
 	pitch: number,
+	roll: number,
 	fov: number,
 	cameraDistance: number,
 	bgMode: string,
@@ -97,6 +101,7 @@ export type NameInputModalState = {
 export type AppState = {
 	yaw: number,
 	pitch: number,
+	roll: number,
 	fov: number,
 	cameraDistance: number,
 	outline: OutlineState,
@@ -124,13 +129,14 @@ export type AppState = {
 Store.DEFAULT_STATE = {
 	yaw = 180 + 45,
 	pitch = 25,
+	roll = 0,
 	fov = 70,
 	cameraDistance = 1,
 	outline = { enabled = false, color = Color3.new(0, 0, 0), thickness = 3 },
 	dropShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 45 },
 	innerShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 225 },
 	outerGlow = { enabled = false, color = Color3.new(1, 1, 1), size = 10, opacity = 75, blur = 6 },
-	chromaticAberration = { enabled = false, amount = 4 },
+	chromaticAberration = { enabled = false, distance = 4, opacity = 100, angle = 45 },
 	bgMode = "transparent",
 	bgColor = Color3.new(1, 1, 1),
 	exportSize = 0,
@@ -150,9 +156,11 @@ Store.DEFAULT_STATE = {
 
 Store.PRESETS = {
 	Front = { yaw = 180, pitch = 10, fov = 70 },
-	Side = { yaw = 18 + 90, pitch = 10, fov = 70 },
-	Iso = { yaw = 18 + 45, pitch = 35, fov = 1 },
-	["3/4"] = { yaw = 315, pitch = 20, fov = 70 },
+	Side = { yaw = -90, pitch = 10, fov = 70 },
+	Back = { yaw = 0, pitch = 10, fov = 70 },
+	Top = { yaw = 0, pitch = 90, fov = 70 },
+	Iso = { yaw = 18 + 45 + 180, pitch = 35, fov = 1 },
+	Angled = { yaw = 315 - 90, pitch = 20, fov = 70 },
 }
 
 local actions = script.Parent.actions
@@ -162,6 +170,7 @@ local handlers = {
 	[A.SET_CAMERA] = require(actions.setCamera),
 	[A.SET_YAW] = require(actions.setYaw),
 	[A.SET_PITCH] = require(actions.setPitch),
+	[A.SET_ROLL] = require(actions.setRoll),
 	[A.SET_FOV] = require(actions.setFov),
 	[A.SET_OUTLINE] = require(actions.setOutline),
 	[A.SET_DROP_SHADOW] = require(actions.setDropShadow),

@@ -16,7 +16,13 @@ function postProcess.applyOutline(buf: buffer, w: number, h: number, color: Colo
 						for dx = -1, 1 do
 							if (dx ~= 0 or dy ~= 0) and not hit then
 								local nx, ny = x + dx, y + dy
-								if nx >= 0 and nx < w and ny >= 0 and ny < h and buffer.readu8(buf, (ny * w + nx) * 4 + 3) >= 128 then
+								if
+									nx >= 0
+									and nx < w
+									and ny >= 0
+									and ny < h
+									and buffer.readu8(buf, (ny * w + nx) * 4 + 3) >= 128
+								then
 									hit = true
 								end
 							end
@@ -131,7 +137,16 @@ function postProcess.applyDropShadow(
 	return out
 end
 
-function postProcess.applyInnerShadow(buf: buffer, w: number, h: number, color: Color3, opacity: number, dist: number, blur: number, angle: number): buffer
+function postProcess.applyInnerShadow(
+	buf: buffer,
+	w: number,
+	h: number,
+	color: Color3,
+	opacity: number,
+	dist: number,
+	blur: number,
+	angle: number
+): buffer
 	local cr = color.R
 	local cg = color.G
 	local cb = color.B
@@ -162,9 +177,21 @@ function postProcess.applyInnerShadow(buf: buffer, w: number, h: number, color: 
 			local effA = math.floor(buffer.readu8(shifted, i) * origA / 255 * opF + 0.5)
 			if effA > 0 then
 				local saf = effA / 255
-				buffer.writeu8(out, o, math.floor(math.clamp(cr * 255 * saf + buffer.readu8(out, o) * (1 - saf), 0, 255) + 0.5))
-				buffer.writeu8(out, o + 1, math.floor(math.clamp(cg * 255 * saf + buffer.readu8(out, o + 1) * (1 - saf), 0, 255) + 0.5))
-				buffer.writeu8(out, o + 2, math.floor(math.clamp(cb * 255 * saf + buffer.readu8(out, o + 2) * (1 - saf), 0, 255) + 0.5))
+				buffer.writeu8(
+					out,
+					o,
+					math.floor(math.clamp(cr * 255 * saf + buffer.readu8(out, o) * (1 - saf), 0, 255) + 0.5)
+				)
+				buffer.writeu8(
+					out,
+					o + 1,
+					math.floor(math.clamp(cg * 255 * saf + buffer.readu8(out, o + 1) * (1 - saf), 0, 255) + 0.5)
+				)
+				buffer.writeu8(
+					out,
+					o + 2,
+					math.floor(math.clamp(cb * 255 * saf + buffer.readu8(out, o + 2) * (1 - saf), 0, 255) + 0.5)
+				)
 			end
 		end
 	end
@@ -238,14 +265,13 @@ function postProcess.applyOuterGlow(
 	return out
 end
 
--- Chromatic aberration: shift R and G in opposite diagonal directions by `amount` pixels.
--- R gathers from the upper-left → appears to bleed toward the lower-right.
--- G gathers from the lower-right → appears to bleed toward the upper-left.
--- B is unchanged.
--- Alpha is the max of the three source alphas so both channels can bleed into
--- transparent areas just outside the model boundary on their respective sides.
-function postProcess.applyChromaticAberration(buf: buffer, w: number, h: number, amount: number): buffer
+-- Chromatic aberration: R and G sampled along opposite directions from center (distance + angle, same convention as drop shadow).
+function postProcess.applyChromaticAberration(buf: buffer, w: number, h: number, distance: number, angle: number, opacity: number): buffer
 	local out = buffer.create(w * h * 4)
+	local rad = math.rad(angle)
+	local offX = math.round(distance * math.cos(rad))
+	local offY = math.round(distance * math.sin(rad))
+	local t = math.clamp(opacity / 100, 0, 1)
 
 	local function readPixel(x: number, y: number): (number, number, number, number)
 		local sx = math.clamp(math.round(x), 0, w - 1)
@@ -257,19 +283,110 @@ function postProcess.applyChromaticAberration(buf: buffer, w: number, h: number,
 	for y = 0, h - 1 do
 		for x = 0, w - 1 do
 			local o = (y * w + x) * 4
-			-- R from upper-left → bleeds to lower-right side of the model
-			-- G from lower-right → bleeds to upper-left side of the model
-			-- B unchanged
-			local rr, _, _, ra = readPixel(x - amount, y - amount)
-			local _, gg, _, ga = readPixel(x + amount, y + amount)
-			local _, _, bb, ba = readPixel(x, y)
-			buffer.writeu8(out, o,     rr)
-			buffer.writeu8(out, o + 1, gg)
-			buffer.writeu8(out, o + 2, bb)
-			buffer.writeu8(out, o + 3, math.max(ra, ga, ba))
+			local or_, og, ob, oa = readPixel(x, y)
+			local rr, _, _, ra = readPixel(x - offX, y - offY)
+			local _, gg, _, ga = readPixel(x + offX, y + offY)
+			local fr = math.floor(or_ * (1 - t) + rr * t + 0.5)
+			local fg = math.floor(og * (1 - t) + gg * t + 0.5)
+			buffer.writeu8(out, o, math.clamp(fr, 0, 255))
+			buffer.writeu8(out, o + 1, math.clamp(fg, 0, 255))
+			buffer.writeu8(out, o + 2, ob)
+			buffer.writeu8(out, o + 3, math.max(ra, ga, oa))
 		end
 	end
 	return out
+end
+
+-- Order matches capture pipeline: inner shadow → outline → drop shadow → chromatic aberration → outer glow.
+-- Run on raw RGBA before background composite so alpha-dependent effects see the model boundary.
+export type ImageEffectsBundle = {
+	innerShadow: {
+		enabled: boolean,
+		color: Color3,
+		opacity: number,
+		distance: number,
+		blur: number,
+		angle: number,
+	},
+	outline: {
+		enabled: boolean,
+		color: Color3,
+		thickness: number,
+	},
+	dropShadow: {
+		enabled: boolean,
+		color: Color3,
+		opacity: number,
+		distance: number,
+		blur: number,
+		angle: number,
+	},
+	chromaticAberration: {
+		enabled: boolean,
+		distance: number,
+		opacity: number,
+		angle: number,
+	},
+	outerGlow: {
+		enabled: boolean,
+		color: Color3,
+		size: number,
+		opacity: number,
+		blur: number,
+	},
+}
+
+function postProcess.applyImageEffects(buf: buffer, w: number, h: number, fx: ImageEffectsBundle): buffer
+	local s = fx
+	if s.innerShadow.enabled then
+		buf = postProcess.applyInnerShadow(
+			buf,
+			w,
+			h,
+			s.innerShadow.color,
+			s.innerShadow.opacity,
+			s.innerShadow.distance,
+			s.innerShadow.blur,
+			s.innerShadow.angle
+		)
+	end
+	if s.outline.enabled and s.outline.thickness > 0 then
+		buf = postProcess.applyOutline(buf, w, h, s.outline.color, s.outline.thickness)
+	end
+	if s.dropShadow.enabled then
+		buf = postProcess.applyDropShadow(
+			buf,
+			w,
+			h,
+			s.dropShadow.color,
+			s.dropShadow.opacity,
+			s.dropShadow.distance,
+			s.dropShadow.blur,
+			s.dropShadow.angle
+		)
+	end
+	if s.chromaticAberration.enabled then
+		buf = postProcess.applyChromaticAberration(
+			buf,
+			w,
+			h,
+			s.chromaticAberration.distance,
+			s.chromaticAberration.angle,
+			s.chromaticAberration.opacity
+		)
+	end
+	if s.outerGlow.enabled then
+		buf = postProcess.applyOuterGlow(
+			buf,
+			w,
+			h,
+			s.outerGlow.color,
+			s.outerGlow.size,
+			s.outerGlow.opacity,
+			s.outerGlow.blur
+		)
+	end
+	return buf
 end
 
 return postProcess

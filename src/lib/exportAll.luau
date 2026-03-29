@@ -1,6 +1,7 @@
 local CollectionService = game:GetService("CollectionService")
 
 local MPB_TAG = "_MPBIcon"
+local EXPORT_FOLDER = "PhotoboothExports"
 
 type ModelEntry = {
 	instance: Instance,
@@ -9,10 +10,10 @@ type ModelEntry = {
 }
 
 local function exportAll(models: { ModelEntry }): { Instance }
-	local folder = workspace:FindFirstChild("_ModelPhotoboothExports")
+	local folder = workspace:FindFirstChild(EXPORT_FOLDER)
 	if not folder then
 		folder = Instance.new("Folder")
-		folder.Name = "_ModelPhotoboothExports"
+		folder.Name = EXPORT_FOLDER
 		folder.Parent = workspace
 	end
 

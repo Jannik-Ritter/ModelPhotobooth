@@ -25,6 +25,7 @@ type Props = {
 	},
 	yaw: number,
 	pitch: number,
+	roll: number,
 	fov: number,
 	isActive: boolean,
 	onSelect: () -> (),
@@ -56,14 +57,14 @@ local function ModelThumb(props: Props)
 			return
 		end
 		cam.FieldOfView = math.max(props.fov, 1)
-		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov)
+		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov, nil, props.roll)
 		return function()
 			cam:Destroy()
 			if clone then
 				clone:Destroy()
 			end
 		end
-	end, { props.entry.instance, props.yaw, props.pitch, props.fov } :: { any })
+	end, { props.entry.instance, props.yaw, props.pitch, props.fov, props.roll } :: { any })
 
 	-- Show captured image if available
 	local content

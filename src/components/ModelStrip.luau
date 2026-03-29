@@ -12,6 +12,7 @@ type Props = {
 	selectedModelIndices: { number },
 	yaw: number,
 	pitch: number,
+	roll: number,
 	fov: number,
 	onSelectModel: (index: number) -> (),
 	onPreviewModel: (index: number) -> (),
@@ -50,6 +51,7 @@ local function ModelStrip(props: Props)
 			entry = entry,
 			yaw = props.yaw,
 			pitch = props.pitch,
+			roll = props.roll,
 			fov = props.fov,
 			isActive = selectedSet[i] == true,
 			onSelect = function()

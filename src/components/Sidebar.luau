@@ -12,7 +12,7 @@ local ChromaticAberrationEffectRow = require(script.Parent.effects.ChromaticAber
 
 local e = React.createElement
 
-local PRESET_ORDER = { "Front", "Side", "Iso", "3/4" }
+local PRESET_ORDER = { "Front", "Side", "Back", "Top", "Iso", "Angled" }
 local EXPORT_SIZES = {
 	{ label = "Native", value = 0 },
 	{ label = "1024", value = 1024 },
@@ -76,7 +76,7 @@ local function Sidebar(props: Props)
 	-- Camera presets
 	local activePreset = nil
 	for name, p in pairs(Store.PRESETS) do
-		if state.yaw == p.yaw and state.pitch == p.pitch and state.fov == p.fov then
+		if state.yaw == p.yaw and state.pitch == p.pitch and state.fov == p.fov and state.roll == 0 then
 			activePreset = name
 			break
 		end
@@ -173,6 +173,45 @@ local function Sidebar(props: Props)
 		PaddingTop = UDim.new(0, 6),
 		PaddingBottom = UDim.new(0, 6),
 	}, {
+		-- Export section
+		export = e(CollapsibleSection, {
+			title = "Export",
+			collapsed = isCollapsed("Export"),
+			onToggle = toggleSection("Export"),
+			LayoutOrder = 0,
+		}, {
+			size = e("Frame", {
+				Size = UDim2.new(1, 0, 0, DROPDOWN_ROW_HEIGHT),
+				BackgroundTransparency = 1,
+				LayoutOrder = 1,
+			}, {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 6),
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+				label = dropdownLabel("Resolution", DROPDOWN_LABEL_WIDTHS.Resolution),
+				dropdown = e(StudioComponents.Dropdown, {
+					Items = { "Native", "1024", "512", "256", "128" },
+					SelectedItem = selectedSize,
+					OnItemSelected = function(lbl)
+						if lbl then
+							for _, opt in ipairs(EXPORT_SIZES) do
+								if opt.label == lbl then
+									props.dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
+									break
+								end
+							end
+						end
+					end,
+					RowHeight = 22,
+					Size = UDim2.new(1, -70, 1, 0),
+					LayoutOrder = 2,
+				}),
+			}),
+		}),
+
 		-- Camera section
 		camera = e(CollapsibleSection, {
 			title = "Camera",
@@ -203,6 +242,7 @@ local function Sidebar(props: Props)
 								yaw = preset.yaw,
 								pitch = preset.pitch,
 								fov = preset.fov,
+								roll = 0,
 							})
 						end
 					end,
@@ -274,6 +314,40 @@ local function Sidebar(props: Props)
 				}),
 				value = e(StudioComponents.Label, {
 					Text = string.format("%.2fx", state.cameraDistance),
+					Size = UDim2.new(0, 26, 1, 0),
+					TextXAlignment = Enum.TextXAlignment.Right,
+					LayoutOrder = 3,
+				}),
+			}),
+			roll = e("Frame", {
+				Size = UDim2.new(1, 0, 0, 22),
+				BackgroundTransparency = 1,
+				LayoutOrder = 4,
+			}, {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 6),
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+				label = e(StudioComponents.Label, {
+					Text = "Roll",
+					Size = UDim2.new(0, 30, 1, 0),
+					LayoutOrder = 1,
+				}),
+				slider = e(StudioComponents.Slider, {
+					Value = state.roll,
+					OnChanged = function(v)
+						props.dispatch({ type = A.SET_ROLL, value = v })
+					end,
+					Min = -180,
+					Max = 180,
+					Step = 1,
+					Size = UDim2.new(1, -68, 1, 0),
+					LayoutOrder = 2,
+				}),
+				value = e(StudioComponents.Label, {
+					Text = tostring(math.floor(state.roll)) .. "\u{00B0}",
 					Size = UDim2.new(0, 26, 1, 0),
 					TextXAlignment = Enum.TextXAlignment.Right,
 					LayoutOrder = 3,
@@ -497,53 +571,22 @@ local function Sidebar(props: Props)
 		}, {
 			row = e(ChromaticAberrationEffectRow, {
 				enabled = state.chromaticAberration.enabled,
-				amount = state.chromaticAberration.amount,
+				distance = state.chromaticAberration.distance,
+				opacity = state.chromaticAberration.opacity,
+				angle = state.chromaticAberration.angle,
 				onToggle = function(v)
 					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { enabled = v } })
 				end,
-				onAmountChanged = function(v)
-					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { amount = v } })
+				onDistanceChanged = function(v)
+					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { distance = v } })
+				end,
+				onOpacityChanged = function(v)
+					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { opacity = v } })
+				end,
+				onAngleChanged = function(v)
+					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { angle = v } })
 				end,
 				LayoutOrder = 1,
-			}),
-		}),
-
-		-- Export section
-		export = e(CollapsibleSection, {
-			title = "Export",
-			collapsed = isCollapsed("Export"),
-			onToggle = toggleSection("Export"),
-			LayoutOrder = 9,
-		}, {
-			size = e("Frame", {
-				Size = UDim2.new(1, 0, 0, DROPDOWN_ROW_HEIGHT),
-				BackgroundTransparency = 1,
-				LayoutOrder = 1,
-			}, {
-				layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-				}),
-				label = dropdownLabel("Resolution", DROPDOWN_LABEL_WIDTHS.Resolution),
-				dropdown = e(StudioComponents.Dropdown, {
-					Items = { "Native", "1024", "512", "256", "128" },
-					SelectedItem = selectedSize,
-					OnItemSelected = function(lbl)
-						if lbl then
-							for _, opt in ipairs(EXPORT_SIZES) do
-								if opt.label == lbl then
-									props.dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
-									break
-								end
-							end
-						end
-					end,
-					RowHeight = 22,
-					Size = UDim2.new(1, -70, 1, 0),
-					LayoutOrder = 2,
-				}),
 			}),
 		}),
 	})
