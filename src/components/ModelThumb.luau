@@ -41,18 +41,23 @@ type Props = {
 local function ModelThumb(props: Props)
 	local theme = StudioComponents.useTheme()
 	local vpRef = React.useRef(nil :: ViewportFrame?)
+	local camRef = React.useRef(nil :: Camera?)
+	local cloneRef = React.useRef(nil :: Instance?)
 	local hovered, setHovered = React.useState(false)
 
-	-- Clone model into small viewport
+	-- Clone the model only when the source instance changes.
 	React.useEffect(
 		function()
 			local vp = vpRef.current
 			if not vp then
 				return
 			end
+
 			local cam = Instance.new("Camera")
 			cam.Parent = vp
 			vp.CurrentCamera = cam
+			camRef.current = cam
+
 			local clone
 			local ok = pcall(function()
 				clone = props.entry.instance:Clone()
@@ -60,8 +65,38 @@ local function ModelThumb(props: Props)
 			end)
 			if not ok or not clone then
 				cam:Destroy()
+				camRef.current = nil
 				return
 			end
+
+			cloneRef.current = clone
+			return function()
+				if camRef.current == cam then
+					camRef.current = nil
+				end
+				if vp.CurrentCamera == cam then
+					vp.CurrentCamera = nil
+				end
+				if cloneRef.current == clone then
+					cloneRef.current = nil
+				end
+				cam:Destroy()
+				if clone then
+					clone:Destroy()
+				end
+			end
+		end,
+		{ props.entry.instance } :: { any }
+	)
+
+	React.useEffect(
+		function()
+			local cam = camRef.current
+			local clone = cloneRef.current
+			if not cam or not clone then
+				return
+			end
+
 			cam.FieldOfView = math.max(props.fov, 1)
 			cam.CFrame = getCF(
 				clone,
@@ -72,15 +107,8 @@ local function ModelThumb(props: Props)
 				props.roll,
 				Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
 			)
-			return function()
-				cam:Destroy()
-				if clone then
-					clone:Destroy()
-				end
-			end
 		end,
 		{
-			props.entry.instance,
 			props.yaw,
 			props.pitch,
 			props.fov,

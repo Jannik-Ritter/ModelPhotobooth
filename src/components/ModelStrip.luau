@@ -7,7 +7,7 @@ local ModelThumb = require(script.Parent.ModelThumb)
 
 local e = React.createElement
 
-local PADDING_V = 6 -- PaddingTop + PaddingBottom each
+local PADDING_V = 9 -- PaddingTop + PaddingBottom each
 
 type Props = {
 	models: { Store.ModelEntry },

@@ -64,8 +64,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			return
 		end
 		local scale = scaleOrErr
-		-- When a fixed export size is set, cap capture + effects at that resolution so we do not
-		-- render ~1020px and downscale at the end. Native (exportSize 0) still uses full cap.
+		-- When a fixed export size is set, cap capture + effects
 		local maxPx = 1020
 		if settings.exportSize > 0 then
 			maxPx = math.min(settings.exportSize, 1020)
@@ -264,7 +263,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 
 		local w, h = cropSz.X, cropSz.Y
 
-		-- Raw transparent RGBA; alpha-dependent effects run before background composite.
+		-- Raw transparent RGBA; alpha-dependent effects run before background composite
 		out = postProcess.applyImageEffects(out, w, h, {
 			innerShadow = settings.innerShadow,
 			outline = settings.outline,
@@ -274,7 +273,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		})
 
 		-- Composite onto background color after effects so the alpha channel is intact
-		-- while effects run (outer glow and drop shadow need it to find the model boundary).
+		-- while effects run (outer glow and drop shadow need it to find the model boundary)
 		if settings.bgMode == "color" or settings.bgMode == "custom" then
 			local bgR = math.floor(settings.bgColor.R * 255 + 0.5)
 			local bgG = math.floor(settings.bgColor.G * 255 + 0.5)
