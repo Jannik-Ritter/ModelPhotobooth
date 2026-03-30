@@ -10,6 +10,7 @@ local e = React.createElement
 export type UploadResult = {
 	name: string,
 	assetId: number?,
+	image: EditableImage?,
 }
 
 type Props = {
@@ -17,11 +18,15 @@ type Props = {
 	onClose: () -> (),
 }
 
--- Panel is 380px wide. With 8px padding each side, content width = 364px.
--- Row layout (absolute): name=140px | gap=8 | idBox=156px | gap=8 | copy=52px = 364px
-local ROW_H = 30
-local NAME_W = 140
-local ID_W = 156
+-- Panel: 420px wide. With 8px padding each side, content width = 404px.
+-- Row layout (absolute, 48px tall):
+--   thumb=40 | gap=8 | name=128 | gap=8 | idBox=160 | gap=8 | copy=52  = 404px
+-- Failed row replaces idBox+gap+copy with a single "Failed" label (220px wide).
+local PANEL_W = 420
+local ROW_H = 48
+local THUMB_W = 40
+local NAME_W = 128
+local ID_W = 160
 local COPY_W = 52
 local GAP = 8
 local PAD = 8
@@ -41,15 +46,28 @@ local function ResultRow(props: UploadResult & { LayoutOrder: number })
 		tb.SelectionStart = 1
 	end
 
+	local nameX = THUMB_W + GAP
+	local rightX = nameX + NAME_W + GAP
+	local rightW = ID_W + GAP + COPY_W -- 220px, fills rest of row for failed case
+
 	return e("Frame", {
 		Size = UDim2.new(1, 0, 0, ROW_H),
 		BackgroundTransparency = 1,
 		LayoutOrder = props.LayoutOrder,
 	}, {
+		thumbnail = e("ImageLabel", {
+			--ImageContent = Content.fromObject(props.image),
+			Image = idText,
+			Size = UDim2.fromOffset(THUMB_W, THUMB_W),
+			Position = UDim2.fromOffset(0, (ROW_H - THUMB_W) / 2),
+			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
+			BorderSizePixel = 0,
+			ScaleType = Enum.ScaleType.Fit,
+		}),
 		nameLabel = e("TextLabel", {
 			Text = props.name,
 			Size = UDim2.fromOffset(NAME_W, ROW_H),
-			Position = UDim2.fromOffset(0, 0),
+			Position = UDim2.fromOffset(nameX, 0),
 			BackgroundTransparency = 1,
 			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
 			TextSize = 13,
@@ -60,8 +78,8 @@ local function ResultRow(props: UploadResult & { LayoutOrder: number })
 		idBox = if idText
 			then e("TextBox", {
 				Text = idText,
-				Size = UDim2.fromOffset(ID_W, ROW_H - 6),
-				Position = UDim2.fromOffset(NAME_W + GAP, 3),
+				Size = UDim2.fromOffset(ID_W, 22),
+				Position = UDim2.fromOffset(rightX, (ROW_H - 22) / 2),
 				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 				BorderSizePixel = 0,
 				TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
@@ -84,8 +102,8 @@ local function ResultRow(props: UploadResult & { LayoutOrder: number })
 			})
 			else e("TextLabel", {
 				Text = "Failed",
-				Size = UDim2.fromOffset(ID_W + GAP + COPY_W, ROW_H),
-				Position = UDim2.fromOffset(NAME_W + GAP, 0),
+				Size = UDim2.fromOffset(rightW, ROW_H),
+				Position = UDim2.fromOffset(rightX, 0),
 				BackgroundTransparency = 1,
 				TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.ErrorText),
 				TextSize = 13,
@@ -96,8 +114,8 @@ local function ResultRow(props: UploadResult & { LayoutOrder: number })
 			then e(StudioComponents.Button, {
 				Text = "Copy",
 				OnActivated = onCopy,
-				Size = UDim2.fromOffset(COPY_W, ROW_H - 6),
-				Position = UDim2.fromOffset(NAME_W + GAP + ID_W + GAP, 3),
+				Size = UDim2.fromOffset(COPY_W, 22),
+				Position = UDim2.fromOffset(rightX + ID_W + GAP, (ROW_H - 22) / 2),
 			})
 			else nil,
 	})
@@ -106,9 +124,9 @@ end
 local function UploadResultModal(props: Props)
 	local theme = StudioComponents.useTheme()
 
-	-- Body height: up to 6 rows visible, then scrolls
+	-- Body height: up to 5 rows visible, then scrolls
 	local rowSpacing = ROW_H + 6
-	local bodyHeight = math.min(#props.results * rowSpacing + 6, 6 * rowSpacing + 6)
+	local bodyHeight = math.min(#props.results * rowSpacing + 6, 5 * rowSpacing + 6)
 
 	local rows: { [string]: any } = {
 		layout = e("UIListLayout", {
@@ -126,15 +144,17 @@ local function UploadResultModal(props: Props)
 		rows["row_" .. tostring(i)] = e(ResultRow, {
 			name = result.name,
 			assetId = result.assetId,
+			image = result.image,
 			LayoutOrder = i,
 		})
 	end
 
+	-- 32 title + 26 hint + bodyHeight
 	return e(Darkener, {
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(380, 32 + bodyHeight),
+			Size = UDim2.fromOffset(PANEL_W, 32 + 26 + bodyHeight),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
@@ -167,9 +187,19 @@ local function UploadResultModal(props: Props)
 					onActivated = props.onClose,
 				}),
 			}),
-			body = e("ScrollingFrame", {
-				Size = UDim2.new(1, 0, 1, -32),
+			hint = e("TextLabel", {
+				Text = "Click Copy to select an ID, then press Ctrl+C",
+				Size = UDim2.new(1, 0, 0, 26),
 				Position = UDim2.fromOffset(0, 32),
+				BackgroundTransparency = 1,
+				TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.SubText),
+				TextSize = 11,
+				Font = Enum.Font.SourceSans,
+				TextXAlignment = Enum.TextXAlignment.Center,
+			}),
+			body = e("ScrollingFrame", {
+				Size = UDim2.new(1, 0, 1, -58),
+				Position = UDim2.fromOffset(0, 58),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				CanvasSize = UDim2.new(0, 0, 0, 0),

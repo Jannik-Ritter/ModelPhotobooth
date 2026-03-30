@@ -67,7 +67,7 @@ local function ToolbarStrip(props: Props)
 				Size = UDim2.fromOffset(76, 24),
 				LayoutOrder = 3,
 			}),
-			uploadAll = e(StudioComponents.Button, {
+			uploadAll = e(StudioComponents.MainButton, {
 				Text = "Upload All",
 				OnActivated = props.onUploadAll,
 				Disabled = props.uploadAllDisabled,

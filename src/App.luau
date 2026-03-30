@@ -21,6 +21,7 @@ local ConfirmModal = require(script.Parent.components.modals.ConfirmModal)
 local HelpShortcutsModal = require(script.Parent.components.modals.HelpShortcutsModal)
 local ProgressModal = require(script.Parent.components.modals.ProgressModal)
 local UploadResultModal = require(script.Parent.components.modals.UploadResultModal)
+local ToastContainer = require(script.Parent.components.ToastContainer)
 
 local e = React.createElement
 local MPB_TAG = "_MPBIcon"
@@ -43,6 +44,31 @@ local function App(props: Props)
 	type UploadResult = { name: string, assetId: number? }
 	local uploadResults, setUploadResults = React.useState(nil :: { UploadResult }?)
 	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
+	type ToastEntry = ToastContainer.ToastEntry
+	local toasts, setToasts = React.useState({} :: { ToastEntry })
+	local nextToastId = React.useRef(0)
+
+	local function addToast(variant: string, message: string)
+		nextToastId.current += 1
+		local id = nextToastId.current
+		setToasts(function(prev)
+			local next = table.clone(prev)
+			table.insert(next, { id = id, variant = variant, message = message })
+			return next
+		end)
+	end
+
+	local function removeToast(id: number)
+		setToasts(function(prev)
+			local next = {}
+			for _, t in ipairs(prev) do
+				if t.id ~= id then
+					table.insert(next, t)
+				end
+			end
+			return next
+		end)
+	end
 	local helpOpen, setHelpOpen = React.useState(props.plugin:GetSetting("hasSeenHelp") ~= true)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
@@ -251,11 +277,18 @@ local function App(props: Props)
 		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
 
 		task.spawn(function()
+			local failCount = 0
+			local successCount = 0
 			for i, target in ipairs(targets) do
 				dispatch({ type = Store.ACTIONS.SET_RENDER_STATUS, index = target.index, status = "pending" })
 				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i - 1, total = #targets })
 
 				local ok, img = renderOne(target.entry.instance, renderSettings()):await()
+				if ok then
+					successCount += 1
+				else
+					failCount += 1
+				end
 				dispatch({
 					type = Store.ACTIONS.SET_RENDER_STATUS,
 					index = target.index,
@@ -267,6 +300,20 @@ local function App(props: Props)
 			end
 			dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = false, progress = 0, total = 0 })
 			renderingRef.current = false
+
+			if failCount > 0 and successCount == 0 then
+				addToast(
+					"error",
+					if #targets == 1
+						then "Render failed: Studio viewport too small"
+						else `All {failCount} renders failed: Studio viewport too small`
+				)
+			elseif failCount > 0 then
+				addToast(
+					"error",
+					`{failCount} render{if failCount == 1 then "" else "s"} failed: Studio viewport too small`
+				)
+			end
 		end)
 	end
 
@@ -292,11 +339,18 @@ local function App(props: Props)
 		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
 
 		task.spawn(function()
+			local failCount = 0
+			local successCount = 0
 			for i, target in ipairs(targets) do
 				dispatch({ type = Store.ACTIONS.SET_RENDER_STATUS, index = target.index, status = "pending" })
 				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i - 1, total = #targets })
 
 				local ok, img = renderOne(target.entry.instance, renderSettings()):await()
+				if ok then
+					successCount += 1
+				else
+					failCount += 1
+				end
 				dispatch({
 					type = Store.ACTIONS.SET_RENDER_STATUS,
 					index = target.index,
@@ -308,6 +362,20 @@ local function App(props: Props)
 			end
 			dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = false, progress = 0, total = 0 })
 			renderingRef.current = false
+
+			if failCount > 0 and successCount == 0 then
+				addToast(
+					"error",
+					if #targets == 1
+						then "Render failed: Studio viewport too small"
+						else `All {failCount} renders failed: Studio viewport too small`
+				)
+			elseif failCount > 0 then
+				addToast(
+					"error",
+					`{failCount} render{if failCount == 1 then "" else "s"} failed: Studio viewport too small`
+				)
+			end
 		end)
 	end
 
@@ -318,6 +386,7 @@ local function App(props: Props)
 			pcall(function()
 				Selection:Set(parts)
 			end)
+			addToast("normal", `Exported {#parts} model{if #parts == 1 then "" else "s"} to Workspace`)
 		end
 	end
 
@@ -374,6 +443,8 @@ local function App(props: Props)
 					title = entry.instance.Name,
 					index = idx,
 				})
+			else
+				addToast("error", "Render failed: Studio viewport too small")
 			end
 		end)
 	end
@@ -732,8 +803,7 @@ local function App(props: Props)
 						progress = state.renderProgress,
 						total = state.renderTotal,
 					})
-					elseif uploading and uploadTotal > 0
-					then e(ProgressModal, {
+					elseif uploading and uploadTotal > 0 then e(ProgressModal, {
 						verb = "Uploading",
 						progress = uploadProgress,
 						total = uploadTotal,
@@ -866,6 +936,10 @@ local function App(props: Props)
 						end,
 					})
 					else nil,
+				toastContainer = e(ToastContainer, {
+					toasts = toasts,
+					onRemove = removeToast,
+				}),
 			}),
 		}),
 	})

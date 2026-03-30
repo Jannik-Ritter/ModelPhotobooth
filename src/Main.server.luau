@@ -6,7 +6,7 @@ local App = require(script.Parent.App)
 
 -- Toolbar
 local toolbar = plugin:CreateToolbar("Model Photobooth")
-local toggleBtn = toolbar:CreateButton("ModelPhotobooth", "Render Models", "rbxassetid://132844739921945")
+local toggleBtn = toolbar:CreateButton("ModelPhotobooth", "Render Models", "rbxassetid://75826695608616")
 
 -- Widget
 local widgetInfo = DockWidgetPluginGuiInfo.new(

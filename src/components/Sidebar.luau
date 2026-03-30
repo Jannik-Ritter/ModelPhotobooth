@@ -9,6 +9,7 @@ local OutlineEffectRow = require(script.Parent.effects.OutlineEffectRow)
 local ShadowEffectRow = require(script.Parent.effects.ShadowEffectRow)
 local OuterGlowEffectRow = require(script.Parent.effects.OuterGlowEffectRow)
 local ChromaticAberrationEffectRow = require(script.Parent.effects.ChromaticAberrationEffectRow)
+local SliderRow = require(script.Parent.effects.SliderRow)
 
 local e = React.createElement
 
@@ -254,107 +255,46 @@ local function Sidebar(props: Props)
 					LayoutOrder = 2,
 				}),
 			}),
-			fov = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 22),
-				BackgroundTransparency = 1,
-				LayoutOrder = 2,
-			}, {
-				layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-				}),
-				label = e(StudioComponents.Label, {
-					Text = "FOV",
-					Size = UDim2.new(0, 30, 1, 0),
-					LayoutOrder = 1,
-				}),
-				slider = e(StudioComponents.Slider, {
-					Value = state.fov,
-					OnChanged = function(v)
-						props.dispatch({ type = A.SET_FOV, value = v })
-					end,
-					Min = 1,
-					Max = 120,
-					Step = 1,
-					Size = UDim2.new(1, -68, 1, 0),
-					LayoutOrder = 2,
-				}),
-				value = e(StudioComponents.Label, {
-					Text = tostring(math.floor(state.fov)) .. "\u{00B0}",
-					Size = UDim2.new(0, 26, 1, 0),
-					TextXAlignment = Enum.TextXAlignment.Right,
-					LayoutOrder = 3,
-				}),
+			fov = e(SliderRow, {
+				label = "FOV",
+				value = state.fov,
+				min = 1,
+				max = 120,
+				onChanged = function(v)
+					props.dispatch({ type = A.SET_FOV, value = v })
+				end,
+				layoutOrder = 2,
+				suffix = "\u{00B0}",
+				labelWidth = 30,
+				valueWidth = 26,
 			}),
-			distance = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 22),
-				BackgroundTransparency = 1,
-				LayoutOrder = 3,
-			}, {
-				layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-				}),
-				label = e(StudioComponents.Label, {
-					Text = "Dist",
-					Size = UDim2.new(0, 30, 1, 0),
-					LayoutOrder = 1,
-				}),
-				slider = e(StudioComponents.Slider, {
-					Value = state.cameraDistance,
-					OnChanged = function(v)
-						props.dispatch({ type = A.SET_CAMERA_DISTANCE, value = v })
-					end,
-					Min = 0,
-					Max = 3,
-					Step = 0.01,
-					Size = UDim2.new(1, -68, 1, 0),
-					LayoutOrder = 2,
-				}),
-				value = e(StudioComponents.Label, {
-					Text = string.format("%.2fx", state.cameraDistance),
-					Size = UDim2.new(0, 26, 1, 0),
-					TextXAlignment = Enum.TextXAlignment.Right,
-					LayoutOrder = 3,
-				}),
+			distance = e(SliderRow, {
+				label = "Dist",
+				value = state.cameraDistance,
+				min = 0,
+				max = 3,
+				step = 0.01,
+				decimals = 2,
+				onChanged = function(v)
+					props.dispatch({ type = A.SET_CAMERA_DISTANCE, value = v })
+				end,
+				layoutOrder = 3,
+				suffix = "x",
+				labelWidth = 30,
+				valueWidth = 26,
 			}),
-			roll = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 22),
-				BackgroundTransparency = 1,
-				LayoutOrder = 4,
-			}, {
-				layout = e("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-				}),
-				label = e(StudioComponents.Label, {
-					Text = "Roll",
-					Size = UDim2.new(0, 30, 1, 0),
-					LayoutOrder = 1,
-				}),
-				slider = e(StudioComponents.Slider, {
-					Value = state.roll,
-					OnChanged = function(v)
-						props.dispatch({ type = A.SET_ROLL, value = v })
-					end,
-					Min = -180,
-					Max = 180,
-					Step = 1,
-					Size = UDim2.new(1, -68, 1, 0),
-					LayoutOrder = 2,
-				}),
-				value = e(StudioComponents.Label, {
-					Text = tostring(math.floor(state.roll)) .. "\u{00B0}",
-					Size = UDim2.new(0, 26, 1, 0),
-					TextXAlignment = Enum.TextXAlignment.Right,
-					LayoutOrder = 3,
-				}),
+			roll = e(SliderRow, {
+				label = "Roll",
+				value = state.roll,
+				min = -180,
+				max = 180,
+				onChanged = function(v)
+					props.dispatch({ type = A.SET_ROLL, value = v })
+				end,
+				layoutOrder = 4,
+				suffix = "\u{00B0}",
+				labelWidth = 30,
+				valueWidth = 26,
 			}),
 			offset = e("Frame", {
 				Size = UDim2.new(1, 0, 0, 44),

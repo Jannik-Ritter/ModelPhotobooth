@@ -38,6 +38,7 @@ local function guideText(theme, layoutOrder: number)
 			"The right panel holds camera, effects, animation, and export settings. Presets save those settings.",
 			"Use the preview controls to render, then Export to place the result in Workspace. ",
 			"To view a render before exporting, click on the icon on the model strip. ",
+			"Use Upload All to send every rendered image to Roblox as an image asset, or open a preview and click Upload to upload just that image. ",
 			'Then Simply right-click the exported results and select "Export as OBJ" to export the image(s). ',
 		}, ""),
 		Size = UDim2.fromScale(1, 0),
