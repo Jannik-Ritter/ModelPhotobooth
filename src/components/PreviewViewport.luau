@@ -172,6 +172,23 @@ local function PreviewViewport(props: Props)
 
 	local activeInstance = if props.entry then props.entry.instance else nil
 
+	-- 1:1 capture region matches min(viewport W,H); dim letterbox/pillarbox (overlay inside ViewportFrame, below HUD).
+	local overlaySize, setOverlaySize = React.useState(Vector2.new(0, 0))
+	React.useEffect(function()
+		local vp = vpRef.current
+		if not vp then
+			return
+		end
+		local function sync()
+			setOverlaySize(vp.AbsoluteSize)
+		end
+		sync()
+		local conn = vp:GetPropertyChangedSignal("AbsoluteSize"):Connect(sync)
+		return function()
+			conn:Disconnect()
+		end
+	end, {})
+
 	-- Clone model into viewport (using WorldModel for animation support)
 	React.useEffect(function()
 		local vp = vpRef.current
@@ -408,13 +425,103 @@ local function PreviewViewport(props: Props)
 		})
 	end
 
+	local ow = overlaySize.X
+	local oh = overlaySize.Y
+	local aspectOverlay = nil
+	if ow > 0 and oh > 0 then
+		local side = math.min(ow, oh)
+		if ow >= oh then
+			local barW = (ow - side) / 2
+			aspectOverlay = e("Frame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				Active = false,
+				ZIndex = 2,
+			}, {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					VerticalAlignment = Enum.VerticalAlignment.Top,
+					HorizontalAlignment = Enum.HorizontalAlignment.Left,
+					Padding = UDim.new(0, 0),
+				}),
+				left = e("Frame", {
+					LayoutOrder = 1,
+					Size = UDim2.new(0, barW, 1, 0),
+					BackgroundColor3 = Color3.new(0, 0, 0),
+					BackgroundTransparency = 0.55,
+					BorderSizePixel = 0,
+					Active = false,
+				}),
+				center = e("Frame", {
+					LayoutOrder = 2,
+					Size = UDim2.new(0, side, 1, 0),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					Active = false,
+				}, {
+					readout = readout,
+				}),
+				right = e("Frame", {
+					LayoutOrder = 3,
+					Size = UDim2.new(0, barW, 1, 0),
+					BackgroundColor3 = Color3.new(0, 0, 0),
+					BackgroundTransparency = 0.55,
+					BorderSizePixel = 0,
+					Active = false,
+				}),
+			})
+		else
+			local barH = (oh - side) / 2
+			aspectOverlay = e("Frame", {
+				Size = UDim2.fromScale(1, 1),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				Active = false,
+				ZIndex = 2,
+			}, {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Vertical,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					VerticalAlignment = Enum.VerticalAlignment.Top,
+					HorizontalAlignment = Enum.HorizontalAlignment.Left,
+					Padding = UDim.new(0, 0),
+				}),
+				top = e("Frame", {
+					LayoutOrder = 1,
+					Size = UDim2.new(1, 0, 0, barH),
+					BackgroundColor3 = Color3.new(0, 0, 0),
+					BackgroundTransparency = 0.55,
+					BorderSizePixel = 0,
+					Active = false,
+				}),
+				center = e("Frame", {
+					LayoutOrder = 2,
+					Size = UDim2.new(1, 0, 0, side),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					Active = false,
+				}, {
+					readout = readout,
+				}),
+				bottom = e("Frame", {
+					LayoutOrder = 3,
+					Size = UDim2.new(1, 0, 0, barH),
+					BackgroundColor3 = Color3.new(0, 0, 0),
+					BackgroundTransparency = 0.55,
+					BorderSizePixel = 0,
+					Active = false,
+				}),
+			})
+		end
+	end
+
 	return e("Frame", {
 		Size = UDim2.new(1, -220, 1, -96),
 		BackgroundTransparency = 1,
+		ZIndex = 99,
 	}, {
-		--[[ aspectRatioConstraint = e("UIAspectRatioConstraint", {
-			AspectRatio = 1,
-		}), ]]
 		padding = e("UIPadding", {
 			PaddingLeft = UDim.new(0, 4),
 			PaddingRight = UDim.new(0, 4),
@@ -431,6 +538,7 @@ local function PreviewViewport(props: Props)
 			LightColor = Color3.new(1, 1, 1),
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
+			aspectOverlay = aspectOverlay,
 			_TrackballInput = e("ImageButton", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
@@ -450,7 +558,6 @@ local function PreviewViewport(props: Props)
 				[React.Event.MouseLeave] = trackball.onMouseLeave,
 			}),
 			empty = emptyLabel,
-			readout = readout,
 			animationPanel = animPanel,
 		}),
 	})
