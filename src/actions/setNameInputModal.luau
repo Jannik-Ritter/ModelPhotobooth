@@ -1,5 +1,7 @@
+local M = require(script.Parent.Parent.lib.shallowMerge)
+
 return function(state, action)
-	local new = table.clone(state)
-	new.nameInputModal = action.value
-	return new
+	return M.merge(state, {
+		nameInputModal = if action.value == nil then M.CLEAR else action.value,
+	})
 end

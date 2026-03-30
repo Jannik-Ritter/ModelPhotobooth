@@ -13,10 +13,7 @@ local STATUS_COLORS = {
 	fail = Color3.fromRGB(220, 60, 60),
 }
 
-local THUMB_SIZE = 80
--- 2 top + content + 2 gap + 16 name row + 2 bottom = THUMB_SIZE (name row fits Studio Label / default text size)
-local CONTENT_HEIGHT = 58
-local NAME_TOP = 62
+local NAME_ROW_HEIGHT = 16
 
 type Props = {
 	entry: {
@@ -29,9 +26,11 @@ type Props = {
 	pitch: number,
 	roll: number,
 	fov: number,
+	cameraDistance: number,
 	offsetX: number,
 	offsetY: number,
 	offsetZ: number,
+	thumbSize: number,
 	isActive: boolean,
 	onSelect: () -> (),
 	onPreview: (() -> ())?,
@@ -69,7 +68,7 @@ local function ModelThumb(props: Props)
 				props.yaw,
 				props.pitch,
 				props.fov,
-				nil,
+				props.cameraDistance,
 				props.roll,
 				Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
 			)
@@ -85,6 +84,7 @@ local function ModelThumb(props: Props)
 			props.yaw,
 			props.pitch,
 			props.fov,
+			props.cameraDistance,
 			props.roll,
 			props.offsetX,
 			props.offsetY,
@@ -93,10 +93,13 @@ local function ModelThumb(props: Props)
 	)
 
 	-- Show captured image if available
+	local s = props.thumbSize
+	local contentH = s - NAME_ROW_HEIGHT - 4 -- 2px top inset + 2px gap above name row
+
 	local content
 	if props.entry.image then
 		content = e("ImageLabel", {
-			Size = UDim2.fromOffset(THUMB_SIZE - 4, CONTENT_HEIGHT),
+			Size = UDim2.fromOffset(s - 4, contentH),
 			Position = UDim2.fromOffset(2, 2),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 			BorderSizePixel = 0,
@@ -106,7 +109,7 @@ local function ModelThumb(props: Props)
 	else
 		content = e("ViewportFrame", {
 			ref = vpRef,
-			Size = UDim2.fromOffset(THUMB_SIZE - 4, CONTENT_HEIGHT),
+			Size = UDim2.fromOffset(s - 4, contentH),
 			Position = UDim2.fromOffset(2, 2),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 			BorderSizePixel = 0,
@@ -116,13 +119,12 @@ local function ModelThumb(props: Props)
 		}, {})
 	end
 
-	-- Magnify icon shown on hover when a capture exists
+	-- Magnify icon centered over the content area
 	local previewIcon = nil
 	if hovered and props.entry.image and props.onPreview then
 		previewIcon = e("ImageButton", {
-			-- Centered over the content area
 			Size = UDim2.fromOffset(24, 24),
-			Position = UDim2.fromOffset(THUMB_SIZE / 2 - 12, 2 + CONTENT_HEIGHT / 2 - 12),
+			Position = UDim2.fromOffset(s / 2 - 12, 2 + contentH / 2 - 12),
 			BackgroundColor3 = Color3.new(0, 0, 0),
 			BackgroundTransparency = 0.35,
 			Image = "rbxassetid://86368281871088",
@@ -138,7 +140,7 @@ local function ModelThumb(props: Props)
 	local accentColor = theme:GetColor(Enum.StudioStyleGuideColor.DialogMainButton)
 
 	return e("TextButton", {
-		Size = UDim2.fromOffset(THUMB_SIZE, THUMB_SIZE),
+		Size = UDim2.fromOffset(s, s),
 		BackgroundColor3 = if props.isActive
 			then accentColor
 			else theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
@@ -163,12 +165,11 @@ local function ModelThumb(props: Props)
 		previewIcon = previewIcon,
 		nameLabel = e(StudioComponents.Label, {
 			Text = props.entry.instance.Name,
-			Size = UDim2.fromOffset(THUMB_SIZE - 4, 16),
-			Position = UDim2.fromOffset(2, NAME_TOP),
+			Size = UDim2.fromOffset(s - 4, NAME_ROW_HEIGHT),
+			Position = UDim2.fromOffset(2, s - NAME_ROW_HEIGHT - 2),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,
-			--TextColor3 = Color3.new(1, 1, 1),
 			TextColorStyle = if props.isActive then nil else Enum.StudioStyleGuideColor.SubText,
 		}),
 		statusDot = e("Frame", {

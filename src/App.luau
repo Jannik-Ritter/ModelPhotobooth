@@ -34,6 +34,8 @@ local function App(props: Props)
 	local animationPlayingRef = React.useRef(false)
 	local activeAnimationIndexRef = React.useRef(nil :: number?)
 	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
+	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
+	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
 
 	-- Keep modelsRef current so the selection listener can access latest renders
 	React.useEffect(function()
@@ -531,80 +533,93 @@ local function App(props: Props)
 					Position = UDim2.fromOffset(0, 36),
 					BackgroundTransparency = 1,
 				}, {
-					preview = e(PreviewViewport, {
-						entry = activeEntry,
-						yaw = state.yaw,
-						pitch = state.pitch,
-						roll = state.roll,
-						fov = state.fov,
-						cameraDistance = state.cameraDistance,
-						offsetX = state.cameraOffsetX,
-						offsetY = state.cameraOffsetY,
-						offsetZ = state.cameraOffsetZ,
-						onTrackball = onTrackball,
-						onTranslate = onTranslate,
-						onScroll = onScroll,
-						isShiftDown = isShiftDown,
-						animations = state.animations,
-						activeAnimationIndex = state.activeAnimationIndex,
-						animationPlaying = state.animationPlaying,
-						animationTimePosition = state.animationTimePosition,
-						animationLength = state.animationLength,
-						onSelectAnimation = onSelectAnimation,
-						onSetPlaying = onSetAnimationPlaying,
-						onSetTimePosition = onSetAnimationTimePosition,
-						onSetLength = onSetAnimationLength,
-					}),
-					modelStrip = e(ModelStrip, {
-						models = state.models,
-						selectedModelIndices = state.selectedModelIndices,
-						yaw = state.yaw,
-						pitch = state.pitch,
-						roll = state.roll,
-						fov = state.fov,
-						offsetX = state.cameraOffsetX,
-						offsetY = state.cameraOffsetY,
-						offsetZ = state.cameraOffsetZ,
-						onSelectModel = function(index)
-							local ctrlDown = isCtrlDown()
-							if ctrlDown then
-								-- Toggle this index in the selection
-								local next = {}
-								local found = false
-								for _, i in ipairs(state.selectedModelIndices) do
-									if i == index then
-										found = true
+					mainSplitter = e(StudioComponents.Splitter, {
+						Alpha = sidebarAlpha,
+						OnChanged = setSidebarAlpha,
+						FillDirection = Enum.FillDirection.Horizontal,
+					}, {
+						Side0 = e(StudioComponents.Splitter, {
+							Alpha = modelStripAlpha,
+							OnChanged = setModelStripAlpha,
+							FillDirection = Enum.FillDirection.Vertical,
+						}, {
+							Side0 = e(PreviewViewport, {
+								entry = activeEntry,
+								yaw = state.yaw,
+								pitch = state.pitch,
+								roll = state.roll,
+								fov = state.fov,
+								cameraDistance = state.cameraDistance,
+								offsetX = state.cameraOffsetX,
+								offsetY = state.cameraOffsetY,
+								offsetZ = state.cameraOffsetZ,
+								onTrackball = onTrackball,
+								onTranslate = onTranslate,
+								onScroll = onScroll,
+								isShiftDown = isShiftDown,
+								animations = state.animations,
+								activeAnimationIndex = state.activeAnimationIndex,
+								animationPlaying = state.animationPlaying,
+								animationTimePosition = state.animationTimePosition,
+								animationLength = state.animationLength,
+								onSelectAnimation = onSelectAnimation,
+								onSetPlaying = onSetAnimationPlaying,
+								onSetTimePosition = onSetAnimationTimePosition,
+								onSetLength = onSetAnimationLength,
+							}),
+							Side1 = e(ModelStrip, {
+								models = state.models,
+								selectedModelIndices = state.selectedModelIndices,
+								yaw = state.yaw,
+								pitch = state.pitch,
+								roll = state.roll,
+								fov = state.fov,
+								cameraDistance = state.cameraDistance,
+								offsetX = state.cameraOffsetX,
+								offsetY = state.cameraOffsetY,
+								offsetZ = state.cameraOffsetZ,
+								onSelectModel = function(index)
+									local ctrlDown = isCtrlDown()
+									if ctrlDown then
+										-- Toggle this index in the selection
+										local next = {}
+										local found = false
+										for _, i in ipairs(state.selectedModelIndices) do
+											if i == index then
+												found = true
+											else
+												table.insert(next, i)
+											end
+										end
+										if not found then
+											table.insert(next, index)
+										end
+										dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
 									else
-										table.insert(next, i)
+										dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
 									end
-								end
-								if not found then
-									table.insert(next, index)
-								end
-								dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
-							else
-								dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
-							end
-						end,
-						onPreviewModel = function(index)
-							local entry = state.models[index]
-							if entry and entry.image then
-								dispatch({
-									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-									image = entry.image,
-									title = entry.instance.Name,
-									index = index,
-								})
-							end
-						end,
-					}),
-					sidebar = e(Sidebar, {
-						state = state,
-						dispatch = dispatch,
-						onSavePreset = openSaveModal,
-						onApplyPreset = applyPreset,
-						onRenamePreset = openRenameModal,
-						onDeletePreset = deletePreset,
+								end,
+								onPreviewModel = function(index)
+									local entry = state.models[index]
+									if entry and entry.image then
+										dispatch({
+											type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+											image = entry.image,
+											title = entry.instance.Name,
+											index = index,
+										})
+									end
+								end,
+							}),
+						}),
+						Side1 = e(Sidebar, {
+							state = state,
+							dispatch = dispatch,
+							onSavePreset = openSaveModal,
+							onApplyPreset = applyPreset,
+							onRenamePreset = openRenameModal,
+							onDeletePreset = deletePreset,
+						}),
 					}),
 				}),
 				renderOverlay = if state.rendering and state.renderTotal > 0

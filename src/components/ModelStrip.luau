@@ -7,6 +7,8 @@ local ModelThumb = require(script.Parent.ModelThumb)
 
 local e = React.createElement
 
+local PADDING_V = 6 -- PaddingTop + PaddingBottom each
+
 type Props = {
 	models: { Store.ModelEntry },
 	selectedModelIndices: { number },
@@ -14,6 +16,7 @@ type Props = {
 	pitch: number,
 	roll: number,
 	fov: number,
+	cameraDistance: number,
 	offsetX: number,
 	offsetY: number,
 	offsetZ: number,
@@ -21,29 +24,33 @@ type Props = {
 	onPreviewModel: (index: number) -> (),
 }
 
--- Bottom strip: same chrome as ToolbarStrip (Titlebar + top border); Studio Label / ScrollFrame for content.
+-- Bottom strip: same chrome as ToolbarStrip; Studio Label / ScrollFrame for content.
 local function ModelStrip(props: Props)
 	local theme = StudioComponents.useTheme()
+	local stripHeight, setStripHeight = React.useState(80)
+
+	-- thumbSize fills the strip height minus top/bottom padding
+	local thumbSize = math.max(20, stripHeight - PADDING_V * 2)
+
+	local onAbsoluteSize = function(rbx: Frame)
+		local h = math.floor(rbx.AbsoluteSize.Y)
+		if h ~= stripHeight then
+			setStripHeight(h)
+		end
+	end
 
 	local stripRoot = {
-		Size = UDim2.new(1, -220, 0, 96),
-		Position = UDim2.new(0, 0, 1, -96),
+		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
 		BorderSizePixel = 0,
+		[React.Change.AbsoluteSize] = onAbsoluteSize,
 	}
 
 	if #props.models == 0 then
 		return e("Frame", stripRoot, {
-			borderTop = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 1),
-				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-				BorderSizePixel = 0,
-				ZIndex = 2,
-			}),
 			label = e(StudioComponents.Label, {
 				Text = "Select models in Explorer",
-				Size = UDim2.new(1, 0, 1, -1),
-				Position = UDim2.fromOffset(0, 1),
+				Size = UDim2.fromScale(1, 1),
 				TextXAlignment = Enum.TextXAlignment.Center,
 				TextYAlignment = Enum.TextYAlignment.Center,
 			}),
@@ -59,10 +66,12 @@ local function ModelStrip(props: Props)
 	for i, entry in ipairs(props.models) do
 		thumbs["thumb_" .. i] = e(ModelThumb, {
 			entry = entry,
+			thumbSize = thumbSize,
 			yaw = props.yaw,
 			pitch = props.pitch,
 			roll = props.roll,
 			fov = props.fov,
+			cameraDistance = props.cameraDistance,
 			offsetX = props.offsetX,
 			offsetY = props.offsetY,
 			offsetZ = props.offsetZ,
@@ -78,15 +87,8 @@ local function ModelStrip(props: Props)
 	end
 
 	return e("Frame", stripRoot, {
-		borderTop = e("Frame", {
-			Size = UDim2.new(1, 0, 0, 1),
-			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-			BorderSizePixel = 0,
-			ZIndex = 2,
-		}),
 		scroll = e(StudioComponents.ScrollFrame, {
-			Size = UDim2.new(1, 0, 1, -1),
-			Position = UDim2.fromOffset(0, 1),
+			Size = UDim2.fromScale(1, 1),
 			ScrollingDirection = Enum.ScrollingDirection.X,
 			Layout = {
 				ClassName = "UIListLayout",
@@ -97,8 +99,8 @@ local function ModelStrip(props: Props)
 			},
 			PaddingLeft = UDim.new(0, 8),
 			PaddingRight = UDim.new(0, 8),
-			PaddingTop = UDim.new(0, 6),
-			PaddingBottom = UDim.new(0, 6),
+			PaddingTop = UDim.new(0, PADDING_V),
+			PaddingBottom = UDim.new(0, PADDING_V),
 		}, thumbs),
 	})
 end

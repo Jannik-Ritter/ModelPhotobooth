@@ -307,9 +307,9 @@ local function Sidebar(props: Props)
 					OnChanged = function(v)
 						props.dispatch({ type = A.SET_CAMERA_DISTANCE, value = v })
 					end,
-					Min = 0.5,
+					Min = 0,
 					Max = 3,
-					Step = 0.05,
+					Step = 0.01,
 					Size = UDim2.new(1, -68, 1, 0),
 					LayoutOrder = 2,
 				}),
@@ -389,7 +389,12 @@ local function Sidebar(props: Props)
 					axisX = e(StudioComponents.NumericInput, {
 						Value = state.cameraOffsetX,
 						OnValidChanged = function(v)
-							props.dispatch({ type = A.SET_CAMERA_OFFSET, x = v, y = state.cameraOffsetY, z = state.cameraOffsetZ })
+							props.dispatch({
+								type = A.SET_CAMERA_OFFSET,
+								x = v,
+								y = state.cameraOffsetY,
+								z = state.cameraOffsetZ,
+							})
 						end,
 						Min = -500,
 						Max = 500,
@@ -407,7 +412,12 @@ local function Sidebar(props: Props)
 					axisY = e(StudioComponents.NumericInput, {
 						Value = state.cameraOffsetY,
 						OnValidChanged = function(v)
-							props.dispatch({ type = A.SET_CAMERA_OFFSET, x = state.cameraOffsetX, y = v, z = state.cameraOffsetZ })
+							props.dispatch({
+								type = A.SET_CAMERA_OFFSET,
+								x = state.cameraOffsetX,
+								y = v,
+								z = state.cameraOffsetZ,
+							})
 						end,
 						Min = -500,
 						Max = 500,
@@ -425,7 +435,12 @@ local function Sidebar(props: Props)
 					axisZ = e(StudioComponents.NumericInput, {
 						Value = state.cameraOffsetZ,
 						OnValidChanged = function(v)
-							props.dispatch({ type = A.SET_CAMERA_OFFSET, x = state.cameraOffsetX, y = state.cameraOffsetY, z = v })
+							props.dispatch({
+								type = A.SET_CAMERA_OFFSET,
+								x = state.cameraOffsetX,
+								y = state.cameraOffsetY,
+								z = v,
+							})
 						end,
 						Min = -500,
 						Max = 500,
@@ -707,19 +722,12 @@ local function Sidebar(props: Props)
 	})
 
 	return e("Frame", {
-		Size = UDim2.new(0, 220, 1, 0),
-		Position = UDim2.new(1, -220, 0, 0),
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromOffset(0, 0),
 		BackgroundTransparency = 1,
 	}, {
-		border = e("Frame", {
-			Size = UDim2.new(0, 1, 1, 0),
-			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-			BorderSizePixel = 0,
-			ZIndex = 2,
-		}),
 		tabs = e(StudioComponents.TabContainer, {
-			Size = UDim2.new(1, -1, 1, 0),
-			Position = UDim2.fromOffset(1, 0),
+			Size = UDim2.fromScale(1, 1),
 			SelectedTab = selectedTab,
 			OnTabSelected = setSelectedTab,
 		}, {

@@ -518,16 +518,10 @@ local function PreviewViewport(props: Props)
 	end
 
 	return e("Frame", {
-		Size = UDim2.new(1, -220, 1, -96),
+		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		ZIndex = 99,
 	}, {
-		padding = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 4),
-			PaddingRight = UDim.new(0, 4),
-			PaddingTop = UDim.new(0, 4),
-			PaddingBottom = UDim.new(0, 4),
-		}),
 		viewport = e("ViewportFrame", {
 			ref = vpRef,
 			Size = UDim2.fromScale(1, 1),

@@ -1,4 +1,4 @@
-local shallowMerge = require(script.Parent.Parent.lib.shallowMerge)
+local shallowMerge = require(script.Parent.Parent.lib.shallowMerge).merge
 
 return function(state, action)
 	local newModels = table.clone(state.models)
