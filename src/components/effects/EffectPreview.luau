@@ -36,6 +36,14 @@ local function getPreviewColors(bgMode: string, bgColor: Color3): (Color3, Color
 		return Color3.new(1, 1, 1), Color3.fromRGB(38, 38, 38)
 	end
 
+	if bgMode == "custom" then
+		local lum = 0.299 * bgColor.R + 0.587 * bgColor.G + 0.114 * bgColor.B
+		if lum > 0.5 then
+			return Color3.new(0, 0, 0), bgColor
+		end
+		return Color3.new(1, 1, 1), bgColor
+	end
+
 	-- White export background -> white dot on black preview background
 	if isColorNear(bgColor, Color3.new(1, 1, 1)) then
 		return Color3.new(0, 0, 0), Color3.new(1, 1, 1)
@@ -100,7 +108,16 @@ local function EffectPreview(props: Props)
 			imgRef.current = img
 			setEditableImage(img)
 		end,
-		{ props.outline, props.dropShadow, props.innerShadow, props.outerGlow, props.chromaticAberration, dotColor } :: { any }
+		{
+			props.outline,
+			props.dropShadow,
+			props.innerShadow,
+			props.outerGlow,
+			props.chromaticAberration,
+			dotColor,
+			props.bgMode,
+			props.bgColor,
+		} :: { any }
 	)
 
 	-- Destroy image on unmount (e.g. when section is collapsed)

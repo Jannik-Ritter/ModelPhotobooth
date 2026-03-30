@@ -1,7 +1,3 @@
-if not plugin then
-	error("[ModelPhotobooth] Right-click -> Save as Local Plugin", 0)
-end
-
 local Packages = script.Parent.Parent.Packages
 local React = require(Packages.react)
 local ReactRoblox = require(Packages["react-roblox"])
@@ -14,7 +10,7 @@ local toggleBtn = toolbar:CreateButton("ModelPhotobooth", "Render Models", "rbxa
 
 -- Widget
 local widgetInfo = DockWidgetPluginGuiInfo.new(
-	Enum.InitialDockState.Left,
+	Enum.InitialDockState.Float,
 	false, -- initially disabled
 	false, -- don't override saved state
 	780,

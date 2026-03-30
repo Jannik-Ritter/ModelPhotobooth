@@ -17,6 +17,7 @@ local ImagePreviewModal = require(script.Parent.components.modals.ImagePreviewMo
 local ColorPickerModal = require(script.Parent.components.modals.ColorPickerModal)
 local NameInputModal = require(script.Parent.components.modals.NameInputModal)
 local ConfirmModal = require(script.Parent.components.modals.ConfirmModal)
+local HelpShortcutsModal = require(script.Parent.components.modals.HelpShortcutsModal)
 local Darkener = require(script.Parent.components.modals.Darkener)
 
 local e = React.createElement
@@ -34,8 +35,11 @@ local function App(props: Props)
 	local animationPlayingRef = React.useRef(false)
 	local activeAnimationIndexRef = React.useRef(nil :: number?)
 	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
+	local helpOpen, setHelpOpen = React.useState(false)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
+	-- Drives PreviewViewport cursor; ref-based isShiftDown() does not re-render children on key repeat
+	local shiftDown, setShiftDown = React.useState(false)
 
 	-- Keep modelsRef current so the selection listener can access latest renders
 	React.useEffect(function()
@@ -160,6 +164,12 @@ local function App(props: Props)
 	local function onWidgetInputBegan(_, input)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			activeInputsRef.current[input.KeyCode] = true
+			if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+				setShiftDown(
+					activeInputsRef.current[Enum.KeyCode.LeftShift] == true
+						or activeInputsRef.current[Enum.KeyCode.RightShift] == true
+				)
+			end
 			if input.KeyCode == Enum.KeyCode.Space and activeAnimationIndexRef.current then
 				dispatch({
 					type = Store.ACTIONS.SET_ANIMATION_PLAYING,
@@ -172,6 +182,12 @@ local function App(props: Props)
 	local function onWidgetInputEnded(_, input)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
 			activeInputsRef.current[input.KeyCode] = nil
+			if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
+				setShiftDown(
+					activeInputsRef.current[Enum.KeyCode.LeftShift] == true
+						or activeInputsRef.current[Enum.KeyCode.RightShift] == true
+				)
+			end
 		end
 	end
 
@@ -459,6 +475,18 @@ local function App(props: Props)
 		end
 	end
 
+	local function onResetCamera()
+		dispatch({
+			type = Store.ACTIONS.SET_CAMERA,
+			yaw = Store.DEFAULT_STATE.yaw,
+			pitch = Store.DEFAULT_STATE.pitch,
+			fov = Store.DEFAULT_STATE.fov,
+			roll = 0,
+			resetOffset = true,
+		})
+		dispatch({ type = Store.ACTIONS.SET_CAMERA_DISTANCE, value = Store.DEFAULT_STATE.cameraDistance })
+	end
+
 	local totalCount = 0
 	for _, entry in ipairs(state.models) do
 		if not entry.isExported then
@@ -524,6 +552,9 @@ local function App(props: Props)
 					onRender = startRenderSelected,
 					onRenderAll = startRenderAll,
 					onExport = doExport,
+					onHelp = function()
+						setHelpOpen(true)
+					end,
 					renderDisabled = not hasRenderableSelected,
 					renderAllDisabled = totalCount == 0,
 					exportDisabled = not hasRenders,
@@ -556,7 +587,9 @@ local function App(props: Props)
 								onTrackball = onTrackball,
 								onTranslate = onTranslate,
 								onScroll = onScroll,
+								onResetCamera = onResetCamera,
 								isShiftDown = isShiftDown,
+								shiftDown = shiftDown,
 								animations = state.animations,
 								activeAnimationIndex = state.activeAnimationIndex,
 								animationPlaying = state.animationPlaying,
@@ -719,35 +752,55 @@ local function App(props: Props)
 					then (function()
 						local A = Store.ACTIONS
 						local target = state.colorPickerTarget
-						local title, color, action
+						local title, color
+						local onPickerColor: (Color3) -> ()
 						if target == "outline" then
 							title = "Outline Color"
 							color = state.outline.color
-							action = A.SET_OUTLINE
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_OUTLINE, value = { color = c } })
+							end
 						elseif target == "shadow" then
 							title = "Shadow Color"
 							color = state.dropShadow.color
-							action = A.SET_DROP_SHADOW
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_DROP_SHADOW, value = { color = c } })
+							end
 						elseif target == "inner" then
 							title = "Inner Shadow Color"
 							color = state.innerShadow.color
-							action = A.SET_INNER_SHADOW
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_INNER_SHADOW, value = { color = c } })
+							end
+						elseif target == "background" then
+							title = "Background Color"
+							color = state.bgColor
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_BG_COLOR, value = c })
+							end
 						else
 							title = "Outer Glow Color"
 							color = state.outerGlow.color
-							action = A.SET_OUTER_GLOW
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_OUTER_GLOW, value = { color = c } })
+							end
 						end
 						return e(ColorPickerModal, {
 							title = title,
 							color = color,
-							onColorChanged = function(c)
-								dispatch({ type = action, value = { color = c } })
-							end,
+							onColorChanged = onPickerColor,
 							onClose = function()
 								dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = nil })
 							end,
 						})
 					end)()
+					else nil,
+				helpShortcutsModal = if helpOpen
+					then e(HelpShortcutsModal, {
+						onClose = function()
+							setHelpOpen(false)
+						end,
+					})
 					else nil,
 			}),
 		}),

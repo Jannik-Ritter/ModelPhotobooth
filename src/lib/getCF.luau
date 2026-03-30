@@ -1,13 +1,26 @@
-local function getCF(model: Instance, yaw: number, pitch: number, fov: number, distanceMultiplier: number?, roll: number?, offset: Vector3?): CFrame
-	local cf, sz
-	pcall(function()
-		if model:IsA("Model") then
-			cf, sz = model:GetBoundingBox()
-		else
-			cf = (model :: BasePart).CFrame
-			sz = (model :: BasePart).Size
-		end
-	end)
+local function getCF(
+	model: Instance,
+	yaw: number,
+	pitch: number,
+	fov: number,
+	distanceMultiplier: number?,
+	roll: number?,
+	offset: Vector3?,
+	boundsCF: CFrame?,
+	boundsSize: Vector3?
+): CFrame
+	local cf = boundsCF
+	local sz = boundsSize
+	if not cf or not sz then
+		pcall(function()
+			if model:IsA("Model") then
+				cf, sz = model:GetBoundingBox()
+			else
+				cf = (model :: BasePart).CFrame
+				sz = (model :: BasePart).Size
+			end
+		end)
+	end
 	cf = cf or CFrame.new()
 	sz = sz or Vector3.new(4, 4, 4)
 	local d = (sz.Magnitude / 2 / math.tan(math.rad(math.max(fov, 0.5) / 2))) * 1.18 * (distanceMultiplier or 1)

@@ -31,7 +31,30 @@ type RenderSettings = {
 }
 
 local INTERVAL = 0.05
-local SNAP_TIMEOUT = 0.05
+local SNAP_TIMEOUT = 1 / 60 -- is enough for bg color to propagate
+local POSE_RESOLVE_DT = 1 / 60
+local ANIMATION_LOAD_MAX_ATTEMPTS = 20
+
+local function getBoundsSnapshot(target: Instance): (CFrame, Vector3)
+	local cf = CFrame.new()
+	local size = Vector3.new(4, 4, 4)
+	pcall(function()
+		if target:IsA("Model") then
+			cf, size = target:GetBoundingBox()
+		else
+			cf = (target :: BasePart).CFrame
+			size = (target :: BasePart).Size
+		end
+	end)
+	return cf, size
+end
+
+local function applyAnimationPoseAtTime(animator: Animator, track: AnimationTrack, timePosition: number)
+	track:AdjustSpeed(0)
+	track.TimePosition = timePosition
+	animator:StepAnimations(POSE_RESOLVE_DT)
+	track.TimePosition = timePosition
+end
 
 local function renderOne(model: Instance, settings: RenderSettings)
 	return Promise.new(function(resolve, reject)
@@ -85,6 +108,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			reject("failed to clone model")
 			return
 		end
+		local boundsCF, boundsSize = getBoundsSnapshot(tmpClone)
 
 		-- Pose animation if specified (requires WorldModel + manual StepAnimations)
 		if settings.animationId and settings.animationId ~= "" then
@@ -119,11 +143,19 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			local loadOk = pcall(function()
 				track = animator:LoadAnimation(animObj)
 			end)
+			animObj:Destroy()
 			if loadOk and track then
+				-- Match PreviewViewport animation setup so posed bounds (and camera fit via getCF)
+				-- are consistent between live preview and export renders.
+				track.Priority = Enum.AnimationPriority.Action4
+				track.Looped = true
 				track:Play(0)
-				track:AdjustSpeed(1)
-				track.TimePosition = settings.animationTimePosition or 0
-				animator:StepAnimations(0)
+				local attempts = 0
+				while track.Length == 0 and attempts < ANIMATION_LOAD_MAX_ATTEMPTS do
+					task.wait(INTERVAL)
+					attempts += 1
+				end
+				applyAnimationPoseAtTime(animator, track, settings.animationTimePosition or 0)
 				task.wait(INTERVAL) -- let the pose settle
 			end
 		end
@@ -135,7 +167,9 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			settings.fov,
 			settings.cameraDistance,
 			settings.roll,
-			Vector3.new(settings.cameraOffsetX or 0, settings.cameraOffsetY or 0, settings.cameraOffsetZ or 0)
+			Vector3.new(settings.cameraOffsetX or 0, settings.cameraOffsetY or 0, settings.cameraOffsetZ or 0),
+			boundsCF,
+			boundsSize
 		)
 		task.wait(INTERVAL)
 
@@ -211,14 +245,11 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			local o = i * 4
 			local wr, wg, wb = buffer.readu8(wBuf, o), buffer.readu8(wBuf, o + 1), buffer.readu8(wBuf, o + 2)
 			local br, bg, bb = buffer.readu8(bBuf, o), buffer.readu8(bBuf, o + 1), buffer.readu8(bBuf, o + 2)
-			local a = (
-				(1 - math.max(0, wr - br) / 255)
-				+ (1 - math.max(0, wg - bg) / 255)
-				+ (1 - math.max(0, wb - bb) / 255)
-			) / 3
-			local outA = math.floor(a * 255 + 0.5)
+			-- white_ch - black_ch = 255*(1-alpha) per channel, always >= 0; no math.max needed
+			local outA = 255 - math.floor(((wr - br) + (wg - bg) + (wb - bb)) / 3 + 0.5)
 			local outR, outG, outB
-			if a > 0.008 then
+			if outA > 2 then -- equivalent to a > ~0.008
+				local a = outA / 255
 				outR = math.floor(math.clamp(br / a, 0, 255) + 0.5)
 				outG = math.floor(math.clamp(bg / a, 0, 255) + 0.5)
 				outB = math.floor(math.clamp(bb / a, 0, 255) + 0.5)
@@ -244,7 +275,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 
 		-- Composite onto background color after effects so the alpha channel is intact
 		-- while effects run (outer glow and drop shadow need it to find the model boundary).
-		if settings.bgMode == "color" then
+		if settings.bgMode == "color" or settings.bgMode == "custom" then
 			local bgR = math.floor(settings.bgColor.R * 255 + 0.5)
 			local bgG = math.floor(settings.bgColor.G * 255 + 0.5)
 			local bgB = math.floor(settings.bgColor.B * 255 + 0.5)

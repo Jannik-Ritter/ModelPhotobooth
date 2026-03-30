@@ -13,6 +13,10 @@ local e = React.createElement
 local DEFAULT_VP_WIDTH = 400
 local ROTATION_SENSITIVITY = 0.5
 
+local CURSOR_ORBIT_HOVER = "rbxasset://SystemCursors/OpenHand"
+local CURSOR_ORBIT_DRAG = "rbxasset://SystemCursors/ClosedHand"
+local CURSOR_PAN = "rbxasset://SystemCursors/Cross"
+
 -- StepAnimations(0) often fails to fully resolve the pose in a WorldModel (partial blend / low
 -- effective weight). Real playback uses StepAnimations(dt) with dt > 0. For scrubbing we freeze
 -- the track, step with a nominal frame, then snap TimePosition back if anything drifted.
@@ -57,7 +61,9 @@ type Props = {
 	onTrackball: (dYaw: number, dPitch: number) -> (),
 	onTranslate: (dx: number, dy: number, dz: number) -> (),
 	onScroll: (direction: number) -> (),
+	onResetCamera: () -> (),
 	isShiftDown: () -> boolean,
+	shiftDown: boolean,
 	-- Animation
 	animations: { AnimationInfo },
 	activeAnimationIndex: number?,
@@ -81,13 +87,45 @@ type CameraState = {
 	offsetZ: number,
 }
 
+type BoundsSnapshot = {
+	cf: CFrame,
+	size: Vector3,
+}
+
 local function toOffsetVector(state: CameraState): Vector3
 	return Vector3.new(state.offsetX, state.offsetY, state.offsetZ)
 end
 
-local function applyCamera(camera: Camera, target: Instance, state: CameraState)
+local function getBoundsSnapshot(target: Instance): BoundsSnapshot
+	local cf = CFrame.new()
+	local size = Vector3.new(4, 4, 4)
+	pcall(function()
+		if target:IsA("Model") then
+			cf, size = target:GetBoundingBox()
+		else
+			cf = (target :: BasePart).CFrame
+			size = (target :: BasePart).Size
+		end
+	end)
+	return {
+		cf = cf,
+		size = size,
+	}
+end
+
+local function applyCamera(camera: Camera, target: Instance, state: CameraState, bounds: BoundsSnapshot?)
 	camera.FieldOfView = math.max(state.fov, 1)
-	camera.CFrame = getCF(target, state.yaw, state.pitch, state.fov, state.distance, state.roll, toOffsetVector(state))
+	camera.CFrame = getCF(
+		target,
+		state.yaw,
+		state.pitch,
+		state.fov,
+		state.distance,
+		state.roll,
+		toOffsetVector(state),
+		if bounds then bounds.cf else nil,
+		if bounds then bounds.size else nil
+	)
 end
 
 local function stopAndDestroyTrack(trackRef: { current: AnimationTrack? })
@@ -140,10 +178,14 @@ end
 
 local function PreviewViewport(props: Props)
 	local theme = StudioComponents.useTheme()
+	local mouseIcon = StudioComponents.useMouseIcon()
+	local pointerInViewport, setPointerInViewport = React.useState(false)
+	local pointerInViewportRef = React.useRef(false)
 
 	local vpRef = React.useRef(nil :: ViewportFrame?)
 	local camRef = React.useRef(nil :: Camera?)
 	local cloneRef = React.useRef(nil :: Instance?)
+	local boundsRef = React.useRef(nil :: BoundsSnapshot?)
 	local trackRef = React.useRef(nil :: AnimationTrack?)
 	local animatorRef = React.useRef(nil :: Animator?)
 
@@ -216,7 +258,8 @@ local function PreviewViewport(props: Props)
 
 		camRef.current = camera
 		cloneRef.current = clone
-		applyCamera(camera, clone, cameraStateRef.current)
+		boundsRef.current = getBoundsSnapshot(clone)
+		applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
 
 		return function()
 			stopAndDestroyTrack(trackRef)
@@ -225,8 +268,9 @@ local function PreviewViewport(props: Props)
 			worldModel:Destroy()
 			camRef.current = nil
 			cloneRef.current = nil
+			boundsRef.current = nil
 		end
-	end, { activeInstance } :: { any })
+	end, { activeInstance, props.activeAnimationIndex })
 
 	-- Load animation track when active animation changes
 	React.useEffect(function()
@@ -273,6 +317,12 @@ local function PreviewViewport(props: Props)
 
 		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
 
+		-- Re-apply camera after pose changes so the preview updates immediately. Camera fit uses
+		-- cached pre-animation bounds for stability across preview and export.
+		if camRef.current and cloneRef.current then
+			applyCamera(camRef.current, cloneRef.current, cameraStateRef.current, boundsRef.current)
+		end
+
 		task.spawn(function()
 			local attempts = 0
 			while track.Length == 0 and attempts < 100 do
@@ -302,6 +352,12 @@ local function PreviewViewport(props: Props)
 		end
 
 		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+
+		local camera = camRef.current
+		local clone = cloneRef.current
+		if camera and clone then
+			applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
+		end
 	end, { props.animationTimePosition, props.animationPlaying, props.activeAnimationIndex })
 
 	-- Manual playback via StepAnimations during Heartbeat
@@ -320,6 +376,11 @@ local function PreviewViewport(props: Props)
 
 		local conn = RunService.Heartbeat:Connect(function(dt)
 			animator:StepAnimations(dt)
+			local camera = camRef.current
+			local clone = cloneRef.current
+			if camera and clone then
+				applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
+			end
 			props.onSetTimePosition(track.TimePosition)
 		end)
 
@@ -334,7 +395,7 @@ local function PreviewViewport(props: Props)
 			local camera = camRef.current
 			local clone = cloneRef.current
 			if camera and clone then
-				applyCamera(camera, clone, cameraStateRef.current)
+				applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
 			end
 		end,
 		{
@@ -370,7 +431,7 @@ local function PreviewViewport(props: Props)
 			state.offsetX += delta.X
 			state.offsetY += delta.Y
 			state.offsetZ += delta.Z
-			applyCamera(camera, clone, state)
+			applyCamera(camera, clone, state, boundsRef.current)
 			props.onTranslate(delta.X, delta.Y, delta.Z)
 			return
 		end
@@ -379,9 +440,26 @@ local function PreviewViewport(props: Props)
 		local pitchDelta = dy * ROTATION_SENSITIVITY
 		state.yaw += yawDelta
 		state.pitch += pitchDelta
-		applyCamera(camera, clone, state)
+		applyCamera(camera, clone, state, boundsRef.current)
 		props.onTrackball(yawDelta, pitchDelta)
 	end)
+
+	local isDragging = trackball.isDragging
+
+	-- plugin:GetMouse().Icon is global. Ref syncs on leave before React state so a late Heartbeat/effect
+	-- cannot setIcon after clearIcon. shiftDown is real state from App so cursor updates when Shift toggles.
+	local applyViewportCursor = React.useCallback(function()
+		if not pointerInViewportRef.current then
+			mouseIcon.clearIcon()
+			return
+		end
+		local url = if props.shiftDown then CURSOR_PAN elseif isDragging then CURSOR_ORBIT_DRAG else CURSOR_ORBIT_HOVER
+		mouseIcon.setIcon(url)
+	end, { isDragging, props.shiftDown } :: { any })
+
+	React.useEffect(function()
+		applyViewportCursor()
+	end, { pointerInViewport, isDragging, props.shiftDown, applyViewportCursor } :: { any })
 
 	local emptyLabel = nil
 	if not props.entry then
@@ -408,6 +486,23 @@ local function PreviewViewport(props: Props)
 			),
 			Size = UDim2.fromScale(1, 1),
 			TextXAlignment = Enum.TextXAlignment.Center,
+		}),
+	})
+
+	local resetCameraBtn = e(StudioComponents.DropShadowFrame, {
+		Size = UDim2.fromOffset(24, 20),
+		Position = UDim2.new(1, -8, 0, 8),
+		AnchorPoint = Vector2.new(1, 0),
+		ZIndex = 15,
+	}, {
+		btn = e(StudioComponents.Button, {
+			OnActivated = props.onResetCamera,
+			Icon = {
+				Image = "rbxassetid://114794754040951",
+				Size = Vector2.new(16, 16),
+				UseThemeColor = true,
+			},
+			Size = UDim2.fromScale(1, 1),
 		}),
 	})
 
@@ -462,6 +557,7 @@ local function PreviewViewport(props: Props)
 					Active = false,
 				}, {
 					readout = readout,
+					resetCameraBtn = resetCameraBtn,
 				}),
 				right = e("Frame", {
 					LayoutOrder = 3,
@@ -504,6 +600,7 @@ local function PreviewViewport(props: Props)
 					Active = false,
 				}, {
 					readout = readout,
+					resetCameraBtn = resetCameraBtn,
 				}),
 				bottom = e("Frame", {
 					LayoutOrder = 3,
@@ -521,6 +618,15 @@ local function PreviewViewport(props: Props)
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		ZIndex = 99,
+		[React.Event.MouseEnter] = function()
+			pointerInViewportRef.current = true
+			setPointerInViewport(true)
+		end,
+		[React.Event.MouseLeave] = function()
+			pointerInViewportRef.current = false
+			mouseIcon.clearIcon()
+			setPointerInViewport(false)
+		end,
 	}, {
 		viewport = e("ViewportFrame", {
 			ref = vpRef,

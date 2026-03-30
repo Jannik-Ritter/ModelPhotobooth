@@ -24,6 +24,7 @@ local BG_PRESETS = {
 	{ label = "None", mode = "transparent", color = nil },
 	{ label = "White", mode = "color", color = Color3.new(1, 1, 1) },
 	{ label = "Black", mode = "color", color = Color3.fromRGB(18, 18, 18) },
+	{ label = "Custom", mode = "custom", color = nil },
 }
 local DROPDOWN_ROW_HEIGHT = 20
 local DROPDOWN_LABEL_TEXT_SIZE = 16
@@ -86,6 +87,7 @@ local function Sidebar(props: Props)
 	local selectedBg = nil
 	for _, preset in ipairs(BG_PRESETS) do
 		local match = (preset.mode == "transparent" and state.bgMode == "transparent")
+			or (preset.mode == "custom" and state.bgMode == "custom")
 			or (
 				preset.mode == "color"
 				and state.bgMode == "color"
@@ -473,7 +475,7 @@ local function Sidebar(props: Props)
 				}),
 				label = dropdownLabel("Color", DROPDOWN_LABEL_WIDTHS.Color),
 				dropdown = e(StudioComponents.Dropdown, {
-					Items = { "None", "White", "Black" },
+					Items = { "None", "White", "Black", "Custom" },
 					SelectedItem = selectedBg,
 					OnItemSelected = function(lbl)
 						if lbl then
@@ -493,6 +495,41 @@ local function Sidebar(props: Props)
 					LayoutOrder = 2,
 				}),
 			}),
+			customBg = if state.bgMode == "custom"
+				then e("Frame", {
+					Size = UDim2.new(1, 0, 0, DROPDOWN_ROW_HEIGHT),
+					BackgroundTransparency = 1,
+					LayoutOrder = 2,
+				}, {
+					layout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 6),
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+						HorizontalFlex = Enum.UIFlexAlignment.Fill,
+					}),
+					label = dropdownLabel("Pick", DROPDOWN_LABEL_WIDTHS.Color),
+					swatch = e("TextButton", {
+						Size = UDim2.new(1, -58, 0, 16),
+						BackgroundColor3 = state.bgColor,
+						BorderSizePixel = 0,
+						Text = "",
+						AutoButtonColor = false,
+						LayoutOrder = 2,
+						[React.Event.MouseButton1Click] = function()
+							local target = if state.colorPickerTarget == "background" then nil else "background"
+							props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+						end,
+					}, {
+						aspectRatioConstraint = e("UIAspectRatioConstraint", { AspectRatio = 1 }),
+						corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+						stroke = e("UIStroke", {
+							Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
+							Thickness = 1,
+						}),
+					}),
+				})
+				else nil,
 		}),
 
 		-- Effects Preview section

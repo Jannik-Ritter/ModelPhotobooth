@@ -64,7 +64,10 @@ local function ModelStrip(props: Props)
 
 	local thumbs = {}
 	for i, entry in ipairs(props.models) do
-		thumbs["thumb_" .. i] = e(ModelThumb, {
+		-- Key by model identity (not index) so list compaction does not recycle a thumb's internal
+		-- viewport state onto a different model when selection order changes.
+		local thumbKey = "thumb_" .. entry.instance:GetDebugId(0)
+		thumbs[thumbKey] = e(ModelThumb, {
 			entry = entry,
 			thumbSize = thumbSize,
 			yaw = props.yaw,

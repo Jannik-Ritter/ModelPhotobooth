@@ -9,6 +9,7 @@ type Props = {
 	onRender: () -> (),
 	onRenderAll: () -> (),
 	onExport: () -> (),
+	onHelp: () -> (),
 	renderDisabled: boolean,
 	renderAllDisabled: boolean,
 	exportDisabled: boolean,
@@ -63,6 +64,16 @@ local function ToolbarStrip(props: Props)
 				Disabled = props.exportDisabled,
 				Size = UDim2.fromOffset(76, 24),
 				LayoutOrder = 3,
+			}),
+			help = e(StudioComponents.Button, {
+				OnActivated = props.onHelp,
+				Icon = {
+					Image = "rbxassetid://101420100842394",
+					Size = Vector2.new(16, 16),
+					UseThemeColor = true,
+				},
+				Size = UDim2.fromOffset(24, 24),
+				LayoutOrder = 4,
 			}),
 		}),
 	})

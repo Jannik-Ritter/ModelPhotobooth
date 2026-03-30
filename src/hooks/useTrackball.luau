@@ -6,11 +6,13 @@ type TrackballResult = {
 	onInputChanged: (rbx: GuiObject, input: InputObject) -> (),
 	onInputEnded: (rbx: GuiObject, input: InputObject) -> (),
 	onMouseLeave: () -> (),
+	isDragging: boolean,
 }
 
 local function useTrackball(onDelta: (dx: number, dy: number) -> ()): TrackballResult
 	local draggingRef = React.useRef(false)
 	local lastPosRef = React.useRef(Vector2.zero)
+	local isDragging, setIsDragging = React.useState(false)
 
 	local onInputBegan = React.useCallback(function(_rbx: GuiObject, input: InputObject)
 		if
@@ -18,6 +20,7 @@ local function useTrackball(onDelta: (dx: number, dy: number) -> ()): TrackballR
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
 			draggingRef.current = true
+			setIsDragging(true)
 			lastPosRef.current = Vector2.new(input.Position.X, input.Position.Y)
 		end
 	end, {})
@@ -46,11 +49,13 @@ local function useTrackball(onDelta: (dx: number, dy: number) -> ()): TrackballR
 			or input.UserInputType == Enum.UserInputType.Touch
 		then
 			draggingRef.current = false
+			setIsDragging(false)
 		end
 	end, {})
 
 	local onMouseLeave = React.useCallback(function()
 		draggingRef.current = false
+		setIsDragging(false)
 	end, {})
 
 	return {
@@ -58,6 +63,7 @@ local function useTrackball(onDelta: (dx: number, dy: number) -> ()): TrackballR
 		onInputChanged = onInputChanged,
 		onInputEnded = onInputEnded,
 		onMouseLeave = onMouseLeave,
+		isDragging = isDragging,
 	}
 end
 
