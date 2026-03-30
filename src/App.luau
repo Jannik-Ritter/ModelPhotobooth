@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 local Store = require(script.Parent.Store)
 local renderOne = require(script.Parent.lib.renderOne)
 local exportAll = require(script.Parent.lib.exportAll)
+local uploadOne = require(script.Parent.lib.uploadOne)
 local PresetSerialization = require(script.Parent.lib.presetSerialization)
 local ToolbarStrip = require(script.Parent.components.ToolbarStrip)
 local PreviewViewport = require(script.Parent.components.PreviewViewport)
@@ -18,7 +19,8 @@ local ColorPickerModal = require(script.Parent.components.modals.ColorPickerModa
 local NameInputModal = require(script.Parent.components.modals.NameInputModal)
 local ConfirmModal = require(script.Parent.components.modals.ConfirmModal)
 local HelpShortcutsModal = require(script.Parent.components.modals.HelpShortcutsModal)
-local Darkener = require(script.Parent.components.modals.Darkener)
+local ProgressModal = require(script.Parent.components.modals.ProgressModal)
+local UploadResultModal = require(script.Parent.components.modals.UploadResultModal)
 
 local e = React.createElement
 local MPB_TAG = "_MPBIcon"
@@ -34,8 +36,14 @@ local function App(props: Props)
 	local activeInputsRef = React.useRef({} :: { [Enum.KeyCode]: boolean })
 	local animationPlayingRef = React.useRef(false)
 	local activeAnimationIndexRef = React.useRef(nil :: number?)
+	local uploadingRef = React.useRef(false)
+	local uploading, setUploading = React.useState(false)
+	local uploadProgress, setUploadProgress = React.useState(0)
+	local uploadTotal, setUploadTotal = React.useState(0)
+	type UploadResult = { name: string, assetId: number? }
+	local uploadResults, setUploadResults = React.useState(nil :: { UploadResult }?)
 	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
-	local helpOpen, setHelpOpen = React.useState(false)
+	local helpOpen, setHelpOpen = React.useState(props.plugin:GetSetting("hasSeenHelp") ~= true)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
 	-- Drives PreviewViewport cursor; ref-based isShiftDown() does not re-render children on key repeat
@@ -442,6 +450,67 @@ local function App(props: Props)
 		dispatch({ type = Store.ACTIONS.SET_PRESETS, value = next })
 	end
 
+	-- Upload all rendered images to Roblox
+	local function doUploadAll()
+		if uploadingRef.current then
+			return
+		end
+		local targets = {}
+		for _, entry in ipairs(state.models) do
+			if entry.image then
+				table.insert(targets, entry)
+			end
+		end
+		if #targets == 0 then
+			return
+		end
+		uploadingRef.current = true
+		setUploading(true)
+		setUploadProgress(0)
+		setUploadTotal(#targets)
+		task.spawn(function()
+			local results: { UploadResult } = {}
+			for i, entry in ipairs(targets) do
+				setUploadProgress(i - 1)
+				local ok, assetId = uploadOne(entry.image :: EditableImage, entry.instance.Name)
+				table.insert(results, { name = entry.instance.Name, assetId = if ok then assetId else nil })
+				setUploadProgress(i)
+			end
+			uploadingRef.current = false
+			setUploading(false)
+			setUploadTotal(0)
+			setUploadProgress(0)
+			setUploadResults(results)
+		end)
+	end
+
+	-- Upload only the currently previewed model's image
+	local function uploadPreview()
+		if uploadingRef.current then
+			return
+		end
+		local idx = state.previewModelIndex
+		if not idx then
+			return
+		end
+		local entry = state.models[idx]
+		if not entry or not entry.image then
+			return
+		end
+		uploadingRef.current = true
+		setUploading(true)
+		setUploadTotal(1)
+		setUploadProgress(0)
+		task.spawn(function()
+			local ok, assetId = uploadOne(entry.image :: EditableImage, entry.instance.Name)
+			uploadingRef.current = false
+			setUploading(false)
+			setUploadTotal(0)
+			setUploadProgress(0)
+			setUploadResults({ { name = entry.instance.Name, assetId = if ok then assetId else nil } })
+		end)
+	end
+
 	-- Trackball handler
 	local function onTrackball(dYaw: number, dPitch: number)
 		dispatch({
@@ -552,12 +621,14 @@ local function App(props: Props)
 					onRender = startRenderSelected,
 					onRenderAll = startRenderAll,
 					onExport = doExport,
+					onUploadAll = doUploadAll,
 					onHelp = function()
 						setHelpOpen(true)
 					end,
 					renderDisabled = not hasRenderableSelected,
 					renderAllDisabled = totalCount == 0,
 					exportDisabled = not hasRenders,
+					uploadAllDisabled = not hasRenders or uploading,
 				}),
 				content = e("Frame", {
 					Size = UDim2.new(1, 0, 1, -36),
@@ -655,35 +726,25 @@ local function App(props: Props)
 						}),
 					}),
 				}),
-				renderOverlay = if state.rendering and state.renderTotal > 0
-					then e(Darkener, {}, {
-						progressBox = e("Frame", {
-							Size = UDim2.fromOffset(260, 64),
-							Position = UDim2.fromScale(0.5, 0.5),
-							AnchorPoint = Vector2.new(0.5, 0.5),
-							BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-							BorderSizePixel = 0,
-						}, {
-							label = e("TextLabel", {
-								Text = string.format("Rendering %d / %d...", state.renderProgress, state.renderTotal),
-								Size = UDim2.new(1, 0, 0, 20),
-								Position = UDim2.fromOffset(0, 12),
-								BackgroundTransparency = 1,
-								TextColor3 = Color3.fromRGB(220, 220, 220),
-								TextSize = 13,
-								Font = Enum.Font.SourceSansSemibold,
-								TextXAlignment = Enum.TextXAlignment.Center,
-								ZIndex = 20,
-							}),
-							bar = e(StudioComponents.ProgressBar, {
-								Value = state.renderProgress / state.renderTotal,
-								Formatter = function(_, _)
-									return "" -- this is intentional to hide the text
-								end,
-								Size = UDim2.new(1, -32, 0, 6),
-								Position = UDim2.fromOffset(16, 40),
-							}),
-						}),
+				progressModal = if state.rendering and state.renderTotal > 0
+					then e(ProgressModal, {
+						verb = "Rendering",
+						progress = state.renderProgress,
+						total = state.renderTotal,
+					})
+					elseif uploading and uploadTotal > 0
+					then e(ProgressModal, {
+						verb = "Uploading",
+						progress = uploadProgress,
+						total = uploadTotal,
+					})
+					else nil,
+				uploadResultModal = if uploadResults ~= nil
+					then e(UploadResultModal, {
+						results = uploadResults,
+						onClose = function()
+							setUploadResults(nil)
+						end,
 					})
 					else nil,
 				imagePreview = if state.previewImage
@@ -702,7 +763,9 @@ local function App(props: Props)
 							})
 						end,
 						onExport = exportPreview,
+						onUpload = uploadPreview,
 						onRerender = rerenderPreview,
+						uploading = uploading,
 						onPrev = if prevRenderedIndex
 							then function()
 								local entry = state.models[prevRenderedIndex]
@@ -798,6 +861,7 @@ local function App(props: Props)
 				helpShortcutsModal = if helpOpen
 					then e(HelpShortcutsModal, {
 						onClose = function()
+							props.plugin:SetSetting("hasSeenHelp", true)
 							setHelpOpen(false)
 						end,
 					})

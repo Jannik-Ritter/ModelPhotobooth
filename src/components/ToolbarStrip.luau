@@ -9,10 +9,12 @@ type Props = {
 	onRender: () -> (),
 	onRenderAll: () -> (),
 	onExport: () -> (),
+	onUploadAll: () -> (),
 	onHelp: () -> (),
 	renderDisabled: boolean,
 	renderAllDisabled: boolean,
 	exportDisabled: boolean,
+	uploadAllDisabled: boolean,
 }
 
 local function ToolbarStrip(props: Props)
@@ -65,6 +67,13 @@ local function ToolbarStrip(props: Props)
 				Size = UDim2.fromOffset(76, 24),
 				LayoutOrder = 3,
 			}),
+			uploadAll = e(StudioComponents.Button, {
+				Text = "Upload All",
+				OnActivated = props.onUploadAll,
+				Disabled = props.uploadAllDisabled,
+				Size = UDim2.fromOffset(76, 24),
+				LayoutOrder = 4,
+			}),
 			help = e(StudioComponents.Button, {
 				OnActivated = props.onHelp,
 				Icon = {
@@ -73,7 +82,7 @@ local function ToolbarStrip(props: Props)
 					UseThemeColor = true,
 				},
 				Size = UDim2.fromOffset(24, 24),
-				LayoutOrder = 4,
+				LayoutOrder = 5,
 			}),
 		}),
 	})

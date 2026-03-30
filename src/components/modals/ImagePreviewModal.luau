@@ -12,12 +12,14 @@ type Props = {
 	title: string,
 	onClose: () -> (),
 	onExport: () -> (),
+	onUpload: () -> (),
 	onRerender: () -> (),
 	onPrev: (() -> ())?,
 	onNext: (() -> ())?,
 	hasPrev: boolean,
 	hasNext: boolean,
 	rendering: boolean,
+	uploading: boolean,
 }
 
 local function ImagePreviewModal(props: Props)
@@ -131,12 +133,19 @@ local function ImagePreviewModal(props: Props)
 					Size = UDim2.fromOffset(80, 24),
 					LayoutOrder = 1,
 				}),
+				upload = e(StudioComponents.Button, {
+					Text = "Upload",
+					OnActivated = props.onUpload,
+					Disabled = props.rendering or props.uploading,
+					Size = UDim2.fromOffset(64, 24),
+					LayoutOrder = 2,
+				}),
 				exportThis = e(StudioComponents.MainButton, {
 					Text = "Export This",
 					OnActivated = props.onExport,
 					Disabled = props.rendering,
 					Size = UDim2.fromOffset(84, 24),
-					LayoutOrder = 2,
+					LayoutOrder = 3,
 				}),
 			}),
 		}),
