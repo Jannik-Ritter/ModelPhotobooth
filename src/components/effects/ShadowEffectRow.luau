@@ -79,7 +79,7 @@ local function ShadowEffectRow(props: Props)
 		LayoutOrder = props.LayoutOrder,
 	}, {
 		opacity = sliderRow("Opacity", props.opacity, 0, 100, props.onOpacityChanged, 2),
-		distance = sliderRow("Distance", props.distance, 0, 20, props.onDistanceChanged, 3),
+		distance = sliderRow("Distance", props.distance, 0, 30, props.onDistanceChanged, 3),
 		blur = sliderRow("Blur", props.blur, 0, 12, props.onBlurChanged, 4),
 		angle = sliderRow("Angle", props.angle, 0, 360, props.onAngleChanged, 5, "\u{00B0}"),
 	})

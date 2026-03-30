@@ -48,7 +48,7 @@ local function OutlineEffectRow(props: Props)
 				Value = props.thickness,
 				OnValidChanged = props.onThicknessChanged,
 				Min = 1,
-				Max = 8,
+				Max = 15,
 				Step = 1,
 				Arrows = true,
 				Size = UDim2.new(1, -62, 1, 0),

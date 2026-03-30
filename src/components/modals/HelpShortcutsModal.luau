@@ -37,6 +37,7 @@ local function guideText(theme, layoutOrder: number)
 			"Select a model or part in the Explorer. It shows up in the strip under the preview. ",
 			"The right panel holds camera, effects, animation, and export settings. Presets save those settings.",
 			"Use the preview controls to render, then Export to place the result in Workspace. ",
+			"To view a render before exporting, click on the icon on the model strip. ",
 			'Then Simply right-click the exported results and select "Export as OBJ" to export the image(s). ',
 		}, ""),
 		Size = UDim2.fromScale(1, 0),
@@ -164,7 +165,7 @@ local function HelpShortcutsModal(props: Props)
 					LayoutOrder = 9,
 				}),
 				prevHeader = sectionHeader(theme, "Preview (mouse)", 10),
-				r3 = shortcutRow("Shift + drag", "Pan the camera instead of orbiting", 11),
+				r3 = shortcutRow("Shift + drag", "Pan the camera", 11),
 				r4 = shortcutRow("Scroll wheel", "Zoom camera distance", 12),
 				r5 = shortcutRow("Ctrl + scroll", "Adjust field of view", 13),
 				spacerCredits = e("Frame", {
