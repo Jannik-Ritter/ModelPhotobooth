@@ -86,7 +86,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			return
 		end
 
-		-- Pose animation if specified (requires WorldModel for animation playback)
+		-- Pose animation if specified (requires WorldModel + manual StepAnimations)
 		if settings.animationId and settings.animationId ~= "" then
 			local wm = Instance.new("WorldModel")
 			wm.Parent = tmpVP
@@ -121,9 +121,10 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			end)
 			if loadOk and track then
 				track:Play(0)
-				track:AdjustSpeed(0)
+				track:AdjustSpeed(1)
 				track.TimePosition = settings.animationTimePosition or 0
-				task.wait(0.1) -- let the pose apply
+				animator:StepAnimations(0)
+				task.wait(INTERVAL) -- let the pose settle
 			end
 		end
 

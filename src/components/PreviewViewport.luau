@@ -10,6 +10,21 @@ local AnimationPanel = require(script.Parent.AnimationPanel)
 
 local e = React.createElement
 
+local DEFAULT_VP_WIDTH = 400
+local ROTATION_SENSITIVITY = 0.5
+
+-- StepAnimations(0) often fails to fully resolve the pose in a WorldModel (partial blend / low
+-- effective weight). Real playback uses StepAnimations(dt) with dt > 0. For scrubbing we freeze
+-- the track, step with a nominal frame, then snap TimePosition back if anything drifted.
+local POSE_RESOLVE_DT = 1 / 60
+
+local function applyAnimationPoseAtTime(animator: Animator, track: AnimationTrack, timePosition: number)
+	track:AdjustSpeed(0)
+	track.TimePosition = timePosition
+	animator:StepAnimations(POSE_RESOLVE_DT)
+	track.TimePosition = timePosition
+end
+
 -- Equivalent angle in (-180, 180] for display (rotation math uses unbounded degrees)
 local function wrapSigned180(deg: number): number
 	local x = (deg % 360 + 360) % 360
@@ -55,63 +70,118 @@ type Props = {
 	onSetLength: (length: number) -> (),
 }
 
+type CameraState = {
+	yaw: number,
+	pitch: number,
+	roll: number,
+	fov: number,
+	distance: number,
+	offsetX: number,
+	offsetY: number,
+	offsetZ: number,
+}
+
+local function toOffsetVector(state: CameraState): Vector3
+	return Vector3.new(state.offsetX, state.offsetY, state.offsetZ)
+end
+
+local function applyCamera(camera: Camera, target: Instance, state: CameraState)
+	camera.FieldOfView = math.max(state.fov, 1)
+	camera.CFrame = getCF(target, state.yaw, state.pitch, state.fov, state.distance, state.roll, toOffsetVector(state))
+end
+
+local function stopAndDestroyTrack(trackRef: { current: AnimationTrack? })
+	local track = trackRef.current
+	if track then
+		track:Stop()
+		track:Destroy()
+		trackRef.current = nil
+	end
+end
+
+local function getOrCreateAnimator(clone: Instance): Animator?
+	local humanoid = clone:FindFirstChildWhichIsA("Humanoid")
+	if humanoid then
+		local animator = humanoid:FindFirstChildWhichIsA("Animator")
+		if not animator then
+			animator = Instance.new("Animator")
+			animator.Parent = humanoid
+		end
+		return animator
+	end
+
+	local animController = clone:FindFirstChildWhichIsA("AnimationController")
+	if not animController then
+		animController = Instance.new("AnimationController")
+		animController.Parent = clone
+	end
+
+	local animator = animController:FindFirstChildWhichIsA("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = animController
+	end
+
+	return animator
+end
+
+local function getCloneSizeMagnitude(clone: Instance): number
+	local sizeMagnitude = 4 * math.sqrt(3)
+	pcall(function()
+		if clone:IsA("Model") then
+			local _, size = clone:GetBoundingBox()
+			sizeMagnitude = size.Magnitude
+		else
+			sizeMagnitude = (clone :: BasePart).Size.Magnitude
+		end
+	end)
+	return sizeMagnitude
+end
+
 local function PreviewViewport(props: Props)
 	local theme = StudioComponents.useTheme()
+
 	local vpRef = React.useRef(nil :: ViewportFrame?)
 	local camRef = React.useRef(nil :: Camera?)
 	local cloneRef = React.useRef(nil :: Instance?)
-	local worldModelRef = React.useRef(nil :: WorldModel?)
 	local trackRef = React.useRef(nil :: AnimationTrack?)
 	local animatorRef = React.useRef(nil :: Animator?)
-	local isPlayingRef = React.useRef(false)
-	local yawRef = React.useRef(props.yaw)
-	local pitchRef = React.useRef(props.pitch)
-	local fovRef = React.useRef(props.fov)
-	local distanceRef = React.useRef(props.cameraDistance)
-	local rollRef = React.useRef(props.roll)
-	local offsetXRef = React.useRef(props.offsetX)
-	local offsetYRef = React.useRef(props.offsetY)
-	local offsetZRef = React.useRef(props.offsetZ)
 
-	-- Keep refs in sync
-	React.useEffect(function()
-		yawRef.current = props.yaw
-	end, { props.yaw })
-	React.useEffect(function()
-		pitchRef.current = props.pitch
-	end, { props.pitch })
-	React.useEffect(function()
-		rollRef.current = props.roll
-	end, { props.roll })
-	React.useEffect(function()
-		fovRef.current = props.fov
-	end, { props.fov })
-	React.useEffect(function()
-		distanceRef.current = props.cameraDistance
-	end, { props.cameraDistance })
-	React.useEffect(function()
-		offsetXRef.current = props.offsetX
-	end, { props.offsetX })
-	React.useEffect(function()
-		offsetYRef.current = props.offsetY
-	end, { props.offsetY })
-	React.useEffect(function()
-		offsetZRef.current = props.offsetZ
-	end, { props.offsetZ })
-	React.useEffect(function()
-		isPlayingRef.current = props.animationPlaying
-	end, { props.animationPlaying })
+	local cameraStateRef = React.useRef({
+		yaw = props.yaw,
+		pitch = props.pitch,
+		roll = props.roll,
+		fov = props.fov,
+		distance = props.cameraDistance,
+		offsetX = props.offsetX,
+		offsetY = props.offsetY,
+		offsetZ = props.offsetZ,
+	} :: CameraState)
+
+	-- Keep event handlers in sync with latest values without many tiny effects.
+	cameraStateRef.current = {
+		yaw = props.yaw,
+		pitch = props.pitch,
+		roll = props.roll,
+		fov = props.fov,
+		distance = props.cameraDistance,
+		offsetX = props.offsetX,
+		offsetY = props.offsetY,
+		offsetZ = props.offsetZ,
+	}
+
+	local activeInstance = if props.entry then props.entry.instance else nil
 
 	-- Clone model into viewport (using WorldModel for animation support)
-	local activeInstance = if props.entry then props.entry.instance else nil
 	React.useEffect(function()
 		local vp = vpRef.current
 		if not vp or not activeInstance then
 			return
 		end
-		local cam = Instance.new("Camera")
-		cam.Parent = vp
-		vp.CurrentCamera = cam
+
+		local camera = Instance.new("Camera")
+		camera.Parent = vp
+		vp.CurrentCamera = camera
 
 		local worldModel = Instance.new("WorldModel")
 		worldModel.Parent = vp
@@ -122,36 +192,22 @@ local function PreviewViewport(props: Props)
 			clone.Parent = worldModel
 		end)
 		if not ok or not clone then
-			cam:Destroy()
+			camera:Destroy()
 			worldModel:Destroy()
 			return
 		end
-		camRef.current = cam
-		cloneRef.current = clone
-		worldModelRef.current = worldModel
 
-		cam.FieldOfView = math.max(props.fov, 1)
-		cam.CFrame = getCF(
-			clone,
-			props.yaw,
-			props.pitch,
-			props.fov,
-			props.cameraDistance,
-			props.roll,
-			Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
-		)
+		camRef.current = camera
+		cloneRef.current = clone
+		applyCamera(camera, clone, cameraStateRef.current)
+
 		return function()
-			if trackRef.current then
-				trackRef.current:Stop()
-				trackRef.current:Destroy()
-				trackRef.current = nil
-			end
+			stopAndDestroyTrack(trackRef)
 			animatorRef.current = nil
-			cam:Destroy()
+			camera:Destroy()
 			worldModel:Destroy()
 			camRef.current = nil
 			cloneRef.current = nil
-			worldModelRef.current = nil
 		end
 	end, { activeInstance } :: { any })
 
@@ -162,12 +218,7 @@ local function PreviewViewport(props: Props)
 			return
 		end
 
-		-- Clean up previous track
-		if trackRef.current then
-			trackRef.current:Stop()
-			trackRef.current:Destroy()
-			trackRef.current = nil
-		end
+		stopAndDestroyTrack(trackRef)
 
 		if not props.activeAnimationIndex then
 			animatorRef.current = nil
@@ -176,56 +227,42 @@ local function PreviewViewport(props: Props)
 
 		local animInfo = props.animations[props.activeAnimationIndex]
 		if not animInfo then
+			animatorRef.current = nil
 			return
 		end
 
-		-- Find or create animator host
-		local animator
-		local humanoid = clone:FindFirstChildWhichIsA("Humanoid")
-		local animController = clone:FindFirstChildWhichIsA("AnimationController")
-		if humanoid then
-			animator = humanoid:FindFirstChildWhichIsA("Animator")
-			if not animator then
-				animator = Instance.new("Animator")
-				animator.Parent = humanoid
-			end
-		else
-			if not animController then
-				animController = Instance.new("AnimationController")
-				animController.Parent = clone
-			end
-			animator = animController:FindFirstChildWhichIsA("Animator")
-			if not animator then
-				animator = Instance.new("Animator")
-				animator.Parent = animController
-			end
+		local animator = getOrCreateAnimator(clone)
+		if not animator then
+			animatorRef.current = nil
+			return
 		end
 		animatorRef.current = animator
 
-		-- Load animation
 		local anim = Instance.new("Animation")
 		anim.AnimationId = animInfo.animationId
-		local track
+		local track: AnimationTrack?
 		local loadOk = pcall(function()
 			track = animator:LoadAnimation(anim)
 		end)
+		anim:Destroy()
 		if not loadOk or not track then
 			return
 		end
 
+		track.Priority = Enum.AnimationPriority.Action4
 		track.Looped = true
 		track:Play(0)
-		track:AdjustSpeed(0) -- start paused
 		trackRef.current = track
 
-		-- Wait for length to become available, then report it
+		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+
 		task.spawn(function()
 			local attempts = 0
 			while track.Length == 0 and attempts < 100 do
 				task.wait(0.05)
 				attempts += 1
 			end
-			if track.Length > 0 then
+			if trackRef.current == track and track.Length > 0 then
 				props.onSetLength(track.Length)
 			end
 		end)
@@ -239,80 +276,56 @@ local function PreviewViewport(props: Props)
 		end
 	end, { props.activeAnimationIndex, activeInstance } :: { any })
 
-	-- Control play/pause
-	React.useEffect(function()
-		local track = trackRef.current
-		if not track then
-			return
-		end
-		if props.animationPlaying then
-			track:AdjustSpeed(1)
-		else
-			track:AdjustSpeed(0)
-		end
-	end, { props.animationPlaying })
-
 	-- Scrub when paused (external time position change from scrubber)
 	React.useEffect(function()
 		local track = trackRef.current
-		if not track or isPlayingRef.current then
+		local animator = animatorRef.current
+		if not track or not animator or props.animationPlaying then
 			return
 		end
-		track.TimePosition = props.animationTimePosition
-		local humanoid = cloneRef.current:FindFirstChildWhichIsA("Humanoid")
 
-		local dt = 0.1
-		humanoid.Animator:StepAnimations(dt)
-	end, { props.animationTimePosition })
+		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+	end, { props.animationTimePosition, props.animationPlaying, props.activeAnimationIndex })
 
-	-- Heartbeat sync during playback
+	-- Manual playback via StepAnimations during Heartbeat
 	React.useEffect(function()
 		if not props.animationPlaying then
 			return
 		end
+
 		local track = trackRef.current
-		if not track then
+		local animator = animatorRef.current
+		if not track or not animator then
 			return
 		end
 
-		local lastUpdate = 0
-		local conn = RunService.Heartbeat:Connect(function()
-			local now = tick()
-			if now - lastUpdate >= 0.05 then
-				lastUpdate = now
-				if track.IsPlaying then
-					props.onSetTimePosition(track.TimePosition)
-				end
-			end
+		track:AdjustSpeed(1)
+
+		local conn = RunService.Heartbeat:Connect(function(dt)
+			animator:StepAnimations(dt)
+			props.onSetTimePosition(track.TimePosition)
 		end)
 
 		return function()
 			conn:Disconnect()
 		end
-	end, { props.animationPlaying })
+	end, { props.animationPlaying, props.activeAnimationIndex, activeInstance })
 
-	-- Update camera when angles, distance, or offset change
+	-- Update camera when camera inputs change externally
 	React.useEffect(
 		function()
-			if camRef.current and cloneRef.current then
-				camRef.current.FieldOfView = math.max(props.fov, 1)
-				camRef.current.CFrame = getCF(
-					cloneRef.current,
-					props.yaw,
-					props.pitch,
-					props.fov,
-					props.cameraDistance,
-					props.roll,
-					Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
-				)
+			local camera = camRef.current
+			local clone = cloneRef.current
+			if camera and clone then
+				applyCamera(camera, clone, cameraStateRef.current)
 			end
 		end,
 		{
 			props.yaw,
 			props.pitch,
+			props.roll,
 			props.fov,
 			props.cameraDistance,
-			props.roll,
 			props.offsetX,
 			props.offsetY,
 			props.offsetZ,
@@ -321,62 +334,38 @@ local function PreviewViewport(props: Props)
 
 	-- Trackball / translate
 	local trackball = useTrackball(function(dx: number, dy: number)
-		local shiftHeld = props.isShiftDown()
+		local camera = camRef.current
+		local clone = cloneRef.current
+		local state = cameraStateRef.current
+		if not camera or not clone then
+			return
+		end
 
-		if shiftHeld then
-			local clone = cloneRef.current
-			local szMag = 4 * math.sqrt(3)
-			if clone then
-				pcall(function()
-					if clone:IsA("Model") then
-						local _, s = clone:GetBoundingBox()
-						szMag = s.Magnitude
-					else
-						szMag = (clone :: BasePart).Size.Magnitude
-					end
-				end)
-			end
-			local vpWidth = vpRef.current and vpRef.current.AbsoluteSize.X or 400
-			local scale = szMag * 1.18 * distanceRef.current / vpWidth
-			local rot = CFrame.fromEulerAnglesYXZ(0, math.rad(yawRef.current), 0)
-				* CFrame.fromEulerAnglesYXZ(math.rad(-pitchRef.current), 0, 0)
+		if props.isShiftDown() then
+			local vpWidth = if vpRef.current then vpRef.current.AbsoluteSize.X else DEFAULT_VP_WIDTH
+			local scale = getCloneSizeMagnitude(clone) * 1.18 * state.distance / vpWidth
+			local rot = CFrame.fromEulerAnglesYXZ(0, math.rad(state.yaw), 0)
+				* CFrame.fromEulerAnglesYXZ(math.rad(-state.pitch), 0, 0)
 			local right = rot * Vector3.new(1, 0, 0)
 			local up = rot * Vector3.new(0, 1, 0)
 			local delta = right * (-dx * scale) + up * (dy * scale)
-			offsetXRef.current += delta.X
-			offsetYRef.current += delta.Y
-			offsetZRef.current += delta.Z
-			if camRef.current and cloneRef.current then
-				camRef.current.CFrame = getCF(
-					cloneRef.current,
-					yawRef.current,
-					pitchRef.current,
-					fovRef.current,
-					distanceRef.current,
-					rollRef.current,
-					Vector3.new(offsetXRef.current, offsetYRef.current, offsetZRef.current)
-				)
-			end
+
+			state.offsetX += delta.X
+			state.offsetY += delta.Y
+			state.offsetZ += delta.Z
+			applyCamera(camera, clone, state)
 			props.onTranslate(delta.X, delta.Y, delta.Z)
-		else
-			yawRef.current = yawRef.current - dx * 0.5
-			pitchRef.current = pitchRef.current + dy * 0.5
-			if camRef.current and cloneRef.current then
-				camRef.current.CFrame = getCF(
-					cloneRef.current,
-					yawRef.current,
-					pitchRef.current,
-					fovRef.current,
-					distanceRef.current,
-					rollRef.current,
-					Vector3.new(offsetXRef.current, offsetYRef.current, offsetZRef.current)
-				)
-			end
-			props.onTrackball(-dx * 0.5, dy * 0.5)
+			return
 		end
+
+		local yawDelta = -dx * ROTATION_SENSITIVITY
+		local pitchDelta = dy * ROTATION_SENSITIVITY
+		state.yaw += yawDelta
+		state.pitch += pitchDelta
+		applyCamera(camera, clone, state)
+		props.onTrackball(yawDelta, pitchDelta)
 	end)
 
-	-- Empty state
 	local emptyLabel = nil
 	if not props.entry then
 		emptyLabel = e(StudioComponents.Label, {
@@ -387,29 +376,24 @@ local function PreviewViewport(props: Props)
 		})
 	end
 
-	-- Angle readout
-	local readout = e("TextLabel", {
-		Text = string.format(
-			"%.0f\u{00B0}  %.0f\u{00B0}  R%.0f\u{00B0}",
-			wrapSigned180(props.yaw),
-			wrapSigned180(props.pitch),
-			wrapSigned180(props.roll)
-		),
+	local readout = e(StudioComponents.DropShadowFrame, {
 		Size = UDim2.fromOffset(120, 20),
-		Position = UDim2.new(0, 8, 1, -28),
-		BackgroundColor3 = Color3.new(0, 0, 0),
-		BackgroundTransparency = 0.5,
-		BorderSizePixel = 0,
-		TextColor3 = Color3.new(1, 1, 1),
-		TextSize = 12,
-		Font = Enum.Font.SourceSans,
-		TextXAlignment = Enum.TextXAlignment.Center,
+		Position = UDim2.fromOffset(8, 8),
+		AnchorPoint = Vector2.new(0, 0),
 		ZIndex = 15,
 	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+		label = e(StudioComponents.Label, {
+			Text = string.format(
+				"%.0f\u{00B0}  %.0f\u{00B0}  R%.0f\u{00B0}",
+				wrapSigned180(props.yaw),
+				wrapSigned180(props.pitch),
+				wrapSigned180(props.roll)
+			),
+			Size = UDim2.fromScale(1, 1),
+			TextXAlignment = Enum.TextXAlignment.Center,
+		}),
 	})
 
-	-- Animation panel overlay
 	local animPanel = nil
 	if #props.animations > 0 then
 		animPanel = e(AnimationPanel, {
@@ -428,9 +412,9 @@ local function PreviewViewport(props: Props)
 		Size = UDim2.new(1, -220, 1, -96),
 		BackgroundTransparency = 1,
 	}, {
-		aspectRatioConstraint = e("UIAspectRatioConstraint", {
+		--[[ aspectRatioConstraint = e("UIAspectRatioConstraint", {
 			AspectRatio = 1,
-		}),
+		}), ]]
 		padding = e("UIPadding", {
 			PaddingLeft = UDim.new(0, 4),
 			PaddingRight = UDim.new(0, 4),

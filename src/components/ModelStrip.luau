@@ -21,24 +21,31 @@ type Props = {
 	onPreviewModel: (index: number) -> (),
 }
 
+-- Bottom strip: same chrome as ToolbarStrip (Titlebar + top border); Studio Label / ScrollFrame for content.
 local function ModelStrip(props: Props)
 	local theme = StudioComponents.useTheme()
 
+	local stripRoot = {
+		Size = UDim2.new(1, -220, 0, 96),
+		Position = UDim2.new(0, 0, 1, -96),
+		BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
+		BorderSizePixel = 0,
+	}
+
 	if #props.models == 0 then
-		return e("Frame", {
-			Size = UDim2.new(1, -220, 0, 96),
-			Position = UDim2.new(0, 0, 1, -96),
-			BackgroundTransparency = 1,
-		}, {
-			border = e("Frame", {
+		return e("Frame", stripRoot, {
+			borderTop = e("Frame", {
 				Size = UDim2.new(1, 0, 0, 1),
 				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
 				BorderSizePixel = 0,
+				ZIndex = 2,
 			}),
 			label = e(StudioComponents.Label, {
 				Text = "Select models in Explorer",
-				Size = UDim2.fromScale(1, 1),
+				Size = UDim2.new(1, 0, 1, -1),
+				Position = UDim2.fromOffset(0, 1),
 				TextXAlignment = Enum.TextXAlignment.Center,
+				TextYAlignment = Enum.TextYAlignment.Center,
 			}),
 		})
 	end
@@ -70,12 +77,8 @@ local function ModelStrip(props: Props)
 		})
 	end
 
-	return e("Frame", {
-		Size = UDim2.new(1, -220, 0, 96),
-		Position = UDim2.new(0, 0, 1, -96),
-		BackgroundTransparency = 1,
-	}, {
-		border = e("Frame", {
+	return e("Frame", stripRoot, {
+		borderTop = e("Frame", {
 			Size = UDim2.new(1, 0, 0, 1),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
 			BorderSizePixel = 0,
@@ -83,7 +86,7 @@ local function ModelStrip(props: Props)
 		}),
 		scroll = e(StudioComponents.ScrollFrame, {
 			Size = UDim2.new(1, 0, 1, -1),
-			Position = UDim2.new(0, 0, 0, 1),
+			Position = UDim2.fromOffset(0, 1),
 			ScrollingDirection = Enum.ScrollingDirection.X,
 			Layout = {
 				ClassName = "UIListLayout",

@@ -14,7 +14,9 @@ local STATUS_COLORS = {
 }
 
 local THUMB_SIZE = 80
-local CONTENT_HEIGHT = 60 -- THUMB_SIZE - 2 top - 16 name - 2 bottom
+-- 2 top + content + 2 gap + 16 name row + 2 bottom = THUMB_SIZE (name row fits Studio Label / default text size)
+local CONTENT_HEIGHT = 58
+local NAME_TOP = 62
 
 type Props = {
 	entry: {
@@ -36,39 +38,59 @@ type Props = {
 	LayoutOrder: number,
 }
 
+-- Thumb tile: themed InputFieldBackground card + Border/MainButton stroke (like PreviewViewport); Studio Label for caption.
 local function ModelThumb(props: Props)
 	local theme = StudioComponents.useTheme()
 	local vpRef = React.useRef(nil :: ViewportFrame?)
 	local hovered, setHovered = React.useState(false)
 
 	-- Clone model into small viewport
-	React.useEffect(function()
-		local vp = vpRef.current
-		if not vp then
-			return
-		end
-		local cam = Instance.new("Camera")
-		cam.Parent = vp
-		vp.CurrentCamera = cam
-		local clone
-		local ok = pcall(function()
-			clone = props.entry.instance:Clone()
-			clone.Parent = vp
-		end)
-		if not ok or not clone then
-			cam:Destroy()
-			return
-		end
-		cam.FieldOfView = math.max(props.fov, 1)
-		cam.CFrame = getCF(clone, props.yaw, props.pitch, props.fov, nil, props.roll,
-			Vector3.new(props.offsetX, props.offsetY, props.offsetZ))
-		return function()
-			cam:Destroy()
-			if clone then
-				clone:Destroy()
+	React.useEffect(
+		function()
+			local vp = vpRef.current
+			if not vp then
+				return
 			end
-		end
-	end, { props.entry.instance, props.yaw, props.pitch, props.fov, props.roll, props.offsetX, props.offsetY, props.offsetZ } :: { any })
+			local cam = Instance.new("Camera")
+			cam.Parent = vp
+			vp.CurrentCamera = cam
+			local clone
+			local ok = pcall(function()
+				clone = props.entry.instance:Clone()
+				clone.Parent = vp
+			end)
+			if not ok or not clone then
+				cam:Destroy()
+				return
+			end
+			cam.FieldOfView = math.max(props.fov, 1)
+			cam.CFrame = getCF(
+				clone,
+				props.yaw,
+				props.pitch,
+				props.fov,
+				nil,
+				props.roll,
+				Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
+			)
+			return function()
+				cam:Destroy()
+				if clone then
+					clone:Destroy()
+				end
+			end
+		end,
+		{
+			props.entry.instance,
+			props.yaw,
+			props.pitch,
+			props.fov,
+			props.roll,
+			props.offsetX,
+			props.offsetY,
+			props.offsetZ,
+		} :: { any }
+	)
 
 	-- Show captured image if available
 	local content
@@ -80,9 +102,7 @@ local function ModelThumb(props: Props)
 			BorderSizePixel = 0,
 			ImageContent = Content.fromObject(props.entry.image),
 			ScaleType = Enum.ScaleType.Fit,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		})
+		}, {})
 	else
 		content = e("ViewportFrame", {
 			ref = vpRef,
@@ -93,9 +113,7 @@ local function ModelThumb(props: Props)
 			Ambient = Color3.fromRGB(160, 160, 160),
 			LightDirection = Vector3.new(-1, -2, -1),
 			LightColor = Color3.new(1, 1, 1),
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
-		})
+		}, {})
 	end
 
 	-- Magnify icon shown on hover when a capture exists
@@ -113,7 +131,7 @@ local function ModelThumb(props: Props)
 			ZIndex = 10,
 			[React.Event.Activated] = props.onPreview,
 		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+			corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 		})
 	end
 
@@ -124,7 +142,7 @@ local function ModelThumb(props: Props)
 		BackgroundColor3 = if props.isActive
 			then accentColor
 			else theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
-		BackgroundTransparency = if props.isActive then 0.85 else 0,
+		BackgroundTransparency = if props.isActive then 0 else 0,
 		BorderSizePixel = 0,
 		Text = "",
 		AutoButtonColor = false,
@@ -137,27 +155,21 @@ local function ModelThumb(props: Props)
 			setHovered(false)
 		end,
 	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		stroke = e("UIStroke", {
-			Color = if props.isActive
-				then accentColor
-				else theme:GetColor(Enum.StudioStyleGuideColor.Border),
+			Color = if props.isActive then accentColor else theme:GetColor(Enum.StudioStyleGuideColor.Border),
 			Thickness = if props.isActive then 2 else 1,
 		}),
 		content = content,
 		previewIcon = previewIcon,
-		nameLabel = e("TextLabel", {
+		nameLabel = e(StudioComponents.Label, {
 			Text = props.entry.instance.Name,
-			Size = UDim2.fromOffset(THUMB_SIZE - 4, 14),
-			Position = UDim2.fromOffset(2, THUMB_SIZE - 16),
-			BackgroundTransparency = 1,
-			TextColor3 = if props.isActive
-				then accentColor
-				else theme:GetColor(Enum.StudioStyleGuideColor.SubText),
-			TextSize = 10,
-			Font = if props.isActive then Enum.Font.SourceSansSemibold else Enum.Font.SourceSans,
+			Size = UDim2.fromOffset(THUMB_SIZE - 4, 16),
+			Position = UDim2.fromOffset(2, NAME_TOP),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			TextXAlignment = Enum.TextXAlignment.Center,
+			TextYAlignment = Enum.TextYAlignment.Center,
+			--TextColor3 = Color3.new(1, 1, 1),
+			TextColorStyle = if props.isActive then nil else Enum.StudioStyleGuideColor.SubText,
 		}),
 		statusDot = e("Frame", {
 			Size = UDim2.fromOffset(8, 8),
@@ -166,7 +178,7 @@ local function ModelThumb(props: Props)
 			BorderSizePixel = 0,
 			ZIndex = 5,
 		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+			corner = e("UICorner", { CornerRadius = UDim.new(1, 0) }),
 		}),
 	})
 end
