@@ -3,7 +3,8 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
-local ModalCloseButton = require(script.Parent.ModalCloseButton)
+local ModalTitleBar = require(script.Parent.ModalTitleBar)
+local constants = require(script.Parent.Parent.Parent.constants)
 
 local e = React.createElement
 
@@ -64,7 +65,7 @@ local function ColorPickerModal(props: Props)
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(360, 391),
+			Size = UDim2.fromOffset(constants.MODAL_DEFAULT_WIDTH, 391),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
@@ -76,31 +77,10 @@ local function ColorPickerModal(props: Props)
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 
-			titleBar = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 32),
-				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
-				BorderSizePixel = 0,
-				LayoutOrder = 1,
-			}, {
-				border = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 1),
-					Position = UDim2.new(0, 0, 1, -1),
-					BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-					BorderSizePixel = 0,
-				}),
-				title = e("TextLabel", {
-					Text = props.title,
-					Size = UDim2.new(1, -40, 1, 0),
-					Position = UDim2.fromOffset(10, 0),
-					BackgroundTransparency = 1,
-					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 18,
-					Font = Enum.Font.SourceSans,
-					TextXAlignment = Enum.TextXAlignment.Left,
-				}),
-				close = e(ModalCloseButton, {
-					onActivated = props.onClose,
-				}),
+			titleBar = e(ModalTitleBar, {
+				title = props.title,
+				onClose = props.onClose,
+				layoutOrder = 1,
 			}),
 
 			swatchRow = e("Frame", {

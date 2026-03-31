@@ -6,6 +6,7 @@ local StudioComponents = require(Packages.studiocomponents)
 
 local getCF = require(script.Parent.Parent.lib.getCF)
 local useTrackball = require(script.Parent.Parent.hooks.useTrackball)
+local constants = require(script.Parent.Parent.constants)
 local AnimationPanel = require(script.Parent.AnimationPanel)
 
 local e = React.createElement
@@ -438,6 +439,9 @@ local function PreviewViewport(props: Props)
 			state.offsetX += delta.X
 			state.offsetY += delta.Y
 			state.offsetZ += delta.Z
+			state.offsetX = math.clamp(state.offsetX, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
+			state.offsetY = math.clamp(state.offsetY, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
+			state.offsetZ = math.clamp(state.offsetZ, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
 			applyCamera(camera, clone, state, boundsRef.current)
 			props.onTranslate(delta.X, delta.Y, delta.Z)
 			return

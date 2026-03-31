@@ -2,6 +2,8 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
+local constants = require(script.Parent.Parent.constants)
+
 local e = React.createElement
 
 type Props = {
@@ -78,7 +80,7 @@ local function ToolbarStrip(props: Props)
 				OnActivated = props.onHelp,
 				Icon = {
 					Image = "rbxassetid://101420100842394",
-					Size = Vector2.new(16, 16),
+					Size = constants.TOOLBAR_ICON_GLYPH,
 					UseThemeColor = true,
 				},
 				Size = UDim2.fromOffset(24, 24),

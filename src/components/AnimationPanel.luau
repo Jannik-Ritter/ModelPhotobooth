@@ -2,6 +2,8 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
+local limitDecimals = require(script.Parent.Parent.utils.limitDecimals)
+
 local e = React.createElement
 
 type AnimationInfo = {
@@ -21,7 +23,7 @@ type Props = {
 }
 
 local function formatTime(seconds: number): string
-	return string.format("%.1f", math.max(0, seconds))
+	return limitDecimals(math.max(0, seconds), 1)
 end
 
 local function AnimationPanel(props: Props)

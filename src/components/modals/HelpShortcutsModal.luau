@@ -3,7 +3,8 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
-local ModalCloseButton = require(script.Parent.ModalCloseButton)
+local ModalTitleBar = require(script.Parent.ModalTitleBar)
+local constants = require(script.Parent.Parent.Parent.constants)
 
 local e = React.createElement
 
@@ -164,7 +165,9 @@ local function HelpShortcutsModal(props: Props)
 		viewportBody = bodyText(
 			theme,
 			"Make the Roblox viewport (the space where you move your camera) in Studio as big as possible. "
-				.. "It needs to be at least 1024px tall and wide to support the highest settings. "
+				.. "It needs to be at least "
+				.. tostring(constants.HELP_MIN_VIEWPORT_PX)
+				.. "px tall and wide to support the highest settings. "
 				.. "If that doesn't work, your monitor might be too small. In that case, change the resolution plugin-setting to be smaller.",
 			2
 		),
@@ -192,31 +195,11 @@ local function HelpShortcutsModal(props: Props)
 				Padding = UDim.new(0, 3),
 			}),
 
-			titleBar = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 32),
-				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
-				BorderSizePixel = 0,
-				LayoutOrder = 1,
-			}, {
-				border = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 1),
-					Position = UDim2.new(0, 0, 1, -1),
-					BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-					BorderSizePixel = 0,
-				}),
-				title = e("TextLabel", {
-					Text = "Help & Shortcuts",
-					Size = UDim2.new(1, -40, 1, 0),
-					Position = UDim2.fromOffset(10, 0),
-					BackgroundTransparency = 1,
-					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = HEADING_TEXT_SIZE,
-					Font = Enum.Font.SourceSans,
-					TextXAlignment = Enum.TextXAlignment.Left,
-				}),
-				close = e(ModalCloseButton, {
-					onActivated = props.onClose,
-				}),
+			titleBar = e(ModalTitleBar, {
+				title = "Help & Shortcuts",
+				onClose = props.onClose,
+				layoutOrder = 1,
+				textSize = HEADING_TEXT_SIZE,
 			}),
 
 			tabContainer = e(StudioComponents.TabContainer, {

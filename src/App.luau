@@ -22,6 +22,7 @@ local HelpShortcutsModal = require(script.Parent.components.modals.HelpShortcuts
 local ProgressModal = require(script.Parent.components.modals.ProgressModal)
 local UploadResultModal = require(script.Parent.components.modals.UploadResultModal)
 local ToastContainer = require(script.Parent.components.ToastContainer)
+local constants = require(script.Parent.constants)
 
 local e = React.createElement
 local MPB_TAG = "_MPBIcon"
@@ -598,9 +599,9 @@ local function App(props: Props)
 	local function onTranslate(dx: number, dy: number, dz: number)
 		dispatch({
 			type = Store.ACTIONS.SET_CAMERA_OFFSET,
-			x = state.cameraOffsetX + dx,
-			y = state.cameraOffsetY + dy,
-			z = state.cameraOffsetZ + dz,
+			x = math.clamp(state.cameraOffsetX + dx, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX),
+			y = math.clamp(state.cameraOffsetY + dy, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX),
+			z = math.clamp(state.cameraOffsetZ + dz, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX),
 		})
 	end
 
@@ -609,10 +610,18 @@ local function App(props: Props)
 		local ctrlDown = isCtrlDown()
 
 		if ctrlDown then
-			local newFov = math.clamp(state.fov + direction * 3, 1, 120)
+			local newFov = math.clamp(
+				state.fov + direction * constants.FOV_SCROLL_STEP,
+				constants.FOV_MIN,
+				constants.FOV_MAX
+			)
 			dispatch({ type = Store.ACTIONS.SET_FOV, value = newFov })
 		else
-			local newDistance = math.clamp(state.cameraDistance - direction * 0.1, 0.1, 3)
+			local newDistance = math.clamp(
+				state.cameraDistance - direction * constants.CAMERA_DISTANCE_SCROLL_STEP,
+				constants.CAMERA_DISTANCE_MIN,
+				constants.CAMERA_DISTANCE_MAX
+			)
 			dispatch({ type = Store.ACTIONS.SET_CAMERA_DISTANCE, value = newDistance })
 		end
 	end

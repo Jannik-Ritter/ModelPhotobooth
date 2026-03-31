@@ -3,7 +3,8 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
-local ModalCloseButton = require(script.Parent.ModalCloseButton)
+local ModalTitleBar = require(script.Parent.ModalTitleBar)
+local constants = require(script.Parent.Parent.Parent.constants)
 
 local e = React.createElement
 
@@ -40,35 +41,14 @@ local function ImagePreviewModal(props: Props)
 			ratioConstraint = e("UIAspectRatioConstraint", {
 				AspectRatio = 1,
 			}),
-			titleBar = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 32),
-				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
-				BorderSizePixel = 0,
-			}, {
-				border = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 1),
-					Position = UDim2.new(0, 0, 1, -1),
-					BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-					BorderSizePixel = 0,
-				}),
-				title = e("TextLabel", {
-					Text = "Preview — " .. props.title,
-					Size = UDim2.new(1, -40, 1, 0),
-					Position = UDim2.fromOffset(10, 0),
-					BackgroundTransparency = 1,
-					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 18,
-					Font = Enum.Font.SourceSans,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextTruncate = Enum.TextTruncate.AtEnd,
-				}),
-				close = e(ModalCloseButton, {
-					onActivated = props.onClose,
-				}),
+			titleBar = e(ModalTitleBar, {
+				title = "Preview — " .. props.title,
+				onClose = props.onClose,
+				textTruncate = Enum.TextTruncate.AtEnd,
 			}),
 			image = e("ImageLabel", {
 				Size = UDim2.new(1, 0, 1, -68),
-				Position = UDim2.fromOffset(0, 32),
+				Position = UDim2.fromOffset(0, constants.MODAL_TITLE_BAR_HEIGHT),
 				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 				BorderSizePixel = 0,
 				ImageContent = Content.fromObject(props.image),
@@ -78,7 +58,7 @@ local function ImagePreviewModal(props: Props)
 				then e(StudioComponents.Button, {
 					Icon = {
 						Image = "rbxassetid://93292117732993",
-						Size = Vector2.new(16, 16),
+						Size = constants.TOOLBAR_ICON_GLYPH,
 						UseThemeColor = true,
 					},
 					OnActivated = props.onPrev,
@@ -93,7 +73,7 @@ local function ImagePreviewModal(props: Props)
 				then e(StudioComponents.Button, {
 					Icon = {
 						Image = "rbxassetid://70823822486733",
-						Size = Vector2.new(16, 16),
+						Size = constants.TOOLBAR_ICON_GLYPH,
 						UseThemeColor = true,
 					},
 					OnActivated = props.onNext,

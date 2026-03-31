@@ -3,6 +3,7 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
+local ModalTitleBar = require(script.Parent.ModalTitleBar)
 
 local e = React.createElement
 
@@ -27,27 +28,9 @@ local function ProgressModal(props: Props)
 			BorderSizePixel = 0,
 			Active = true,
 		}, {
-			titleBar = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 32),
-				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
-				BorderSizePixel = 0,
-			}, {
-				border = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 1),
-					Position = UDim2.new(0, 0, 1, -1),
-					BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-					BorderSizePixel = 0,
-				}),
-				title = e("TextLabel", {
-					Text = props.verb .. "...",
-					Size = UDim2.new(1, -16, 1, 0),
-					Position = UDim2.fromOffset(10, 0),
-					BackgroundTransparency = 1,
-					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 18,
-					Font = Enum.Font.SourceSans,
-					TextXAlignment = Enum.TextXAlignment.Left,
-				}),
+			titleBar = e(ModalTitleBar, {
+				title = props.verb .. "...",
+				onClose = nil,
 			}),
 			body = e("Frame", {
 				Size = UDim2.new(1, 0, 0, 64),

@@ -2,6 +2,8 @@ local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
+local constants = require(script.Parent.Parent.Parent.constants)
+
 local e = React.createElement
 
 type Props = {
@@ -20,14 +22,16 @@ local function EffectRowBase(props: Props)
 	local children: { [string]: any } = {}
 
 	-- Header row: [checkbox + label cluster] ... [color swatch]
-	-- leftCluster fills the row minus 22px reserved for the swatch (16px) + gap (6px)
+	-- leftCluster fills the row minus swatch + gap
+	local swatchGap = 6
+	local swatchReserve = constants.TOOLBAR_ICON_GLYPH.X + swatchGap
 	children["header"] = e("Frame", {
 		Size = UDim2.new(1, 0, 0, 26),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 	}, {
 		leftCluster = e("Frame", {
-			Size = UDim2.new(1, -22, 1, 0),
+			Size = UDim2.new(1, -swatchReserve, 1, 0),
 			BackgroundTransparency = 1,
 		}, {
 			layout = e("UIListLayout", {
@@ -50,7 +54,7 @@ local function EffectRowBase(props: Props)
 			}),
 		}),
 		colorSwatch = e("TextButton", {
-			Size = UDim2.fromOffset(16, 16),
+			Size = UDim2.fromOffset(constants.TOOLBAR_ICON_GLYPH.X, constants.TOOLBAR_ICON_GLYPH.Y),
 			Position = UDim2.fromScale(1, 0.5),
 			AnchorPoint = Vector2.new(1, 0.5),
 			BackgroundColor3 = props.color,

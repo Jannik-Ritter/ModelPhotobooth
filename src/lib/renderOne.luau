@@ -8,6 +8,7 @@ local Promise = require(Packages.promise)
 local getCF = require(script.Parent.getCF)
 local getRenderScale = require(script.Parent.getRenderScale)
 local postProcess = require(script.Parent.postProcess)
+local constants = require(script.Parent.Parent.constants)
 
 type RenderSettings = {
 	yaw: number,
@@ -66,9 +67,9 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		end
 		local scale = scaleOrErr
 		-- When a fixed export size is set, cap capture + effects
-		local maxPx = 1020
+		local maxPx = constants.CAPTURE_MAX_DIMENSION
 		if settings.exportSize > 0 then
-			maxPx = math.min(settings.exportSize, 1020)
+			maxPx = math.min(settings.exportSize, constants.CAPTURE_MAX_DIMENSION)
 		end
 		local CAPSIZE = math.floor(maxPx / math.max(scale.X, scale.Y))
 

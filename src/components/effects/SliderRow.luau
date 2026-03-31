@@ -2,6 +2,8 @@ local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
+local limitDecimals = require(script.Parent.Parent.Parent.utils.limitDecimals)
+
 local e = React.createElement
 
 export type Props = {
@@ -29,7 +31,7 @@ local function SliderRow(props: Props)
 	local isEditing = editText ~= nil
 
 	local formattedValue = if decimals > 0
-		then string.format("%." .. decimals .. "f", props.value) .. (props.suffix or "")
+		then limitDecimals(props.value, decimals) .. (props.suffix or "")
 		else tostring(math.round(props.value)) .. (props.suffix or "")
 
 	local function commit(text: string)

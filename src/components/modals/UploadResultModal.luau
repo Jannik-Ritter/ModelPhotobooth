@@ -3,7 +3,7 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
-local ModalCloseButton = require(script.Parent.ModalCloseButton)
+local ModalTitleBar = require(script.Parent.ModalTitleBar)
 
 local e = React.createElement
 
@@ -172,30 +172,9 @@ local function UploadResultModal(props: Props)
 			Active = true,
 			ClipsDescendants = true,
 		}, {
-			titleBar = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 32),
-				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
-				BorderSizePixel = 0,
-			}, {
-				border = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 1),
-					Position = UDim2.new(0, 0, 1, -1),
-					BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-					BorderSizePixel = 0,
-				}),
-				title = e("TextLabel", {
-					Text = "Upload Complete",
-					Size = UDim2.new(1, -40, 1, 0),
-					Position = UDim2.fromOffset(10, 0),
-					BackgroundTransparency = 1,
-					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 18,
-					Font = Enum.Font.SourceSans,
-					TextXAlignment = Enum.TextXAlignment.Left,
-				}),
-				close = e(ModalCloseButton, {
-					onActivated = props.onClose,
-				}),
+			titleBar = e(ModalTitleBar, {
+				title = "Upload Complete",
+				onClose = props.onClose,
 			}),
 			hint = e("TextLabel", {
 				Text = "Click Copy to select an ID, then press Ctrl+C",
