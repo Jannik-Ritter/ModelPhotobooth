@@ -36,7 +36,8 @@ type RenderSettings = {
 local INTERVAL = 0.05
 local SNAP_TIMEOUT = 1 / 60 -- is enough for bg color to propagate
 local POSE_RESOLVE_DT = 1 / 60
-local ANIMATION_LOAD_MAX_ATTEMPTS = 20
+local POSE_STEP_COUNT = 3
+local ANIMATION_LOAD_MAX_ATTEMPTS = 100
 
 local function applyAnimationPoseAtTime(animator: Animator, track: AnimationTrack, timePosition: number)
 	track:AdjustSpeed(0)
@@ -84,67 +85,75 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		local tmpCam = Instance.new("Camera")
 		tmpCam.Parent = tmpVP
 		tmpVP.CurrentCamera = tmpCam
-		local tmpClone
-		local ok = pcall(function()
-			tmpClone = model:Clone()
-			tmpClone.Parent = tmpVP
-		end)
-		if not ok or not tmpClone then
-			tmpGui:Destroy()
-			reject("failed to clone model")
-			return
-		end
-		local bounds = getBoundsSnapshot(tmpClone)
+	local tmpClone
+	local ok = pcall(function()
+		tmpClone = model:Clone()
+		tmpClone.Parent = tmpVP
+	end)
+	if not ok or not tmpClone then
+		tmpGui:Destroy()
+		reject("failed to clone model")
+		return
+	end
 
-		-- Pose animation if specified (requires WorldModel + manual StepAnimations)
-		if settings.animationId and settings.animationId ~= "" then
-			local wm = Instance.new("WorldModel")
-			wm.Parent = tmpVP
-			tmpClone.Parent = wm
+	-- Bounds snapshot at rest pose to match PreviewViewport (bounds are computed at clone time
+	-- before animation is set up, so camera distance is consistent between preview and render).
+	local bounds = getBoundsSnapshot(tmpClone)
 
-			local animator
-			local humanoid = tmpClone:FindFirstChildWhichIsA("Humanoid")
-			local animController = tmpClone:FindFirstChildWhichIsA("AnimationController")
-			if humanoid then
-				animator = humanoid:FindFirstChildWhichIsA("Animator")
-				if not animator then
-					animator = Instance.new("Animator")
-					animator.Parent = humanoid
-				end
-			else
-				if not animController then
-					animController = Instance.new("AnimationController")
-					animController.Parent = tmpClone
-				end
-				animator = animController:FindFirstChildWhichIsA("Animator")
-				if not animator then
-					animator = Instance.new("Animator")
-					animator.Parent = animController
-				end
+	-- Pose animation if specified (requires WorldModel + manual StepAnimations)
+	if settings.animationId and settings.animationId ~= "" then
+		local wm = Instance.new("WorldModel")
+		wm.Parent = tmpVP
+		tmpClone.Parent = wm
+
+		local animator
+		local humanoid = tmpClone:FindFirstChildWhichIsA("Humanoid")
+		local animController = tmpClone:FindFirstChildWhichIsA("AnimationController")
+		if humanoid then
+			animator = humanoid:FindFirstChildWhichIsA("Animator")
+			if not animator then
+				animator = Instance.new("Animator")
+				animator.Parent = humanoid
 			end
+		else
+			if not animController then
+				animController = Instance.new("AnimationController")
+				animController.Parent = tmpClone
+			end
+			animator = animController:FindFirstChildWhichIsA("Animator")
+			if not animator then
+				animator = Instance.new("Animator")
+				animator.Parent = animController
+			end
+		end
 
-			local animObj = Instance.new("Animation")
-			animObj.AnimationId = settings.animationId
-			local track
-			local loadOk = pcall(function()
-				track = animator:LoadAnimation(animObj)
-			end)
-			animObj:Destroy()
-			if loadOk and track then
-				-- Match PreviewViewport animation setup so posed bounds (and camera fit via getCF)
-				-- are consistent between live preview and export renders.
-				track.Priority = Enum.AnimationPriority.Action4
-				track.Looped = true
-				track:Play(0)
-				local attempts = 0
-				while track.Length == 0 and attempts < ANIMATION_LOAD_MAX_ATTEMPTS do
-					task.wait(INTERVAL)
-					attempts += 1
+		local animObj = Instance.new("Animation")
+		animObj.AnimationId = settings.animationId
+		local track
+		local loadOk = pcall(function()
+			track = animator:LoadAnimation(animObj)
+		end)
+		animObj:Destroy()
+		if loadOk and track then
+			-- Match PreviewViewport animation setup so posed bounds (and camera fit via getCF)
+			-- are consistent between live preview and export renders.
+			track.Priority = Enum.AnimationPriority.Action4
+			track.Looped = true
+			track:Play(0)
+			local attempts = 0
+			while track.Length == 0 and attempts < ANIMATION_LOAD_MAX_ATTEMPTS do
+				task.wait(INTERVAL)
+				attempts += 1
+			end
+			if track.Length > 0 then
+				-- Step multiple times to fully resolve the pose (blend weights, IK, etc.)
+				for _ = 1, POSE_STEP_COUNT do
+					applyAnimationPoseAtTime(animator, track, settings.animationTimePosition or 0)
 				end
-				applyAnimationPoseAtTime(animator, track, settings.animationTimePosition or 0)
 				task.wait(INTERVAL) -- let the pose settle
 			end
 		end
+	end
 
 		applyCamera(tmpCam, tmpClone, {
 			yaw = settings.yaw,

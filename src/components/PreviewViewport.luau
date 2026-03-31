@@ -109,12 +109,16 @@ local function toCameraStateParams(state: CameraState): applyCamera.CameraParams
 	}
 end
 
-local function stopAndDestroyTrack(trackRef: { current: AnimationTrack? })
+local function stopAndDestroyTrack(trackRef: { current: AnimationTrack? }, animator: Animator?)
 	local track = trackRef.current
 	if track then
-		track:Stop()
+		track:Stop(0)
 		track:Destroy()
 		trackRef.current = nil
+		-- Step to reset the rig to default pose now that no tracks are playing
+		if animator then
+			animator:StepAnimations(0)
+		end
 	end
 end
 
@@ -220,7 +224,7 @@ local function PreviewViewport(props: Props)
 			return
 		end
 
-		stopAndDestroyTrack(trackRef)
+		stopAndDestroyTrack(trackRef, animatorRef.current)
 
 		if not props.activeAnimationIndex then
 			animatorRef.current = nil
@@ -276,9 +280,14 @@ local function PreviewViewport(props: Props)
 
 		return function()
 			if trackRef.current == track then
-				track:Stop()
+				track:Stop(0)
 				track:Destroy()
 				trackRef.current = nil
+				-- Reset pose when cleaning up this animation
+				local anim = animatorRef.current
+				if anim then
+					anim:StepAnimations(0)
+				end
 			end
 		end
 	end, { props.activeAnimationIndex, activeInstance } :: { any })
