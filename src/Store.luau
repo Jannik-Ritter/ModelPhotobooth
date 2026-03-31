@@ -26,6 +26,7 @@ Store.ACTIONS = {
 	SET_CAMERA_DISTANCE = "SET_CAMERA_DISTANCE",
 	SET_OUTER_GLOW = "SET_OUTER_GLOW",
 	SET_CHROMATIC_ABERRATION = "SET_CHROMATIC_ABERRATION",
+	SET_LIGHTING = "SET_LIGHTING",
 	SET_ANIMATIONS = "SET_ANIMATIONS",
 	SET_ACTIVE_ANIMATION = "SET_ACTIVE_ANIMATION",
 	SET_ANIMATION_PLAYING = "SET_ANIMATION_PLAYING",
@@ -86,6 +87,14 @@ export type ChromaticAberrationState = {
 	angle: number,
 }
 
+export type LightingState = {
+	lightColor: Color3,
+	ambient: Color3,
+	lightDirectionX: number,
+	lightDirectionY: number,
+	lightDirectionZ: number,
+}
+
 export type PresetEntry = {
 	name: string,
 	yaw: number,
@@ -104,6 +113,7 @@ export type PresetEntry = {
 	innerShadow: InnerShadowState,
 	outerGlow: OuterGlowState,
 	chromaticAberration: ChromaticAberrationState,
+	lighting: LightingState,
 }
 
 export type NameInputModalState = {
@@ -126,6 +136,7 @@ export type AppState = {
 	innerShadow: InnerShadowState,
 	outerGlow: OuterGlowState,
 	chromaticAberration: ChromaticAberrationState,
+	lighting: LightingState,
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
@@ -162,6 +173,13 @@ Store.DEFAULT_STATE = {
 	innerShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 225 },
 	outerGlow = { enabled = false, color = Color3.new(1, 1, 1), size = 10, opacity = 75, blur = 6 },
 	chromaticAberration = { enabled = false, distance = 4, opacity = 100, angle = 45 },
+	lighting = {
+		lightColor = Color3.new(1, 1, 1),
+		ambient = Color3.fromRGB(160, 160, 160),
+		lightDirectionX = -1,
+		lightDirectionY = -2,
+		lightDirectionZ = -1,
+	},
 	bgMode = "transparent",
 	bgColor = Color3.new(1, 1, 1),
 	exportSize = 0,
@@ -222,6 +240,7 @@ local handlers = {
 	[A.SET_CAMERA_OFFSET] = require(actions.setCameraOffset),
 	[A.SET_OUTER_GLOW] = require(actions.setOuterGlow),
 	[A.SET_CHROMATIC_ABERRATION] = require(actions.setChromaticAberration),
+	[A.SET_LIGHTING] = require(actions.setLighting),
 	[A.SET_ANIMATIONS] = require(actions.setAnimations),
 	[A.SET_ACTIVE_ANIMATION] = require(actions.setActiveAnimation),
 	[A.SET_ANIMATION_PLAYING] = require(actions.setAnimationPlaying),

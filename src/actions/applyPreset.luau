@@ -19,5 +19,12 @@ return function(state, action)
 		innerShadow = preset.innerShadow,
 		outerGlow = preset.outerGlow,
 		chromaticAberration = preset.chromaticAberration,
+		lighting = preset.lighting or {
+			lightColor = Color3.new(1, 1, 1),
+			ambient = Color3.fromRGB(160, 160, 160),
+			lightDirectionX = -1,
+			lightDirectionY = -2,
+			lightDirectionZ = -1,
+		},
 	})
 end

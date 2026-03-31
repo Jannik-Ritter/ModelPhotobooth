@@ -23,6 +23,7 @@ type RenderSettings = {
 	innerShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	outerGlow: { enabled: boolean, color: Color3, size: number, opacity: number, blur: number },
 	chromaticAberration: { enabled: boolean, distance: number, opacity: number, angle: number },
+	lighting: { lightColor: Color3, ambient: Color3, lightDirectionX: number, lightDirectionY: number, lightDirectionZ: number },
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
@@ -87,9 +88,9 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		tmpVP.Size = UDim2.fromOffset(CAPSIZE, CAPSIZE)
 		tmpVP.Position = UDim2.new(0.5, -CAPSIZE / 2, 0.5, -CAPSIZE / 2)
 		tmpVP.BorderSizePixel = 0
-		tmpVP.Ambient = Color3.fromRGB(160, 160, 160)
-		tmpVP.LightDirection = Vector3.new(-1, -2, -1)
-		tmpVP.LightColor = Color3.new(1, 1, 1)
+		tmpVP.Ambient = settings.lighting.ambient
+		tmpVP.LightDirection = Vector3.new(settings.lighting.lightDirectionX, settings.lighting.lightDirectionY, settings.lighting.lightDirectionZ)
+		tmpVP.LightColor = settings.lighting.lightColor
 		tmpVP.Parent = tmpGui
 
 		local tmpCam = Instance.new("Camera")

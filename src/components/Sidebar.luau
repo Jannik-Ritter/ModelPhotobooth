@@ -1,3 +1,5 @@
+local Lighting = game:GetService("Lighting")
+
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
@@ -395,12 +397,211 @@ local function Sidebar(props: Props)
 			}),
 		}),
 
+		-- Lighting section
+		lighting = e(CollapsibleSection, {
+			title = "Lighting",
+			collapsed = isCollapsed("Lighting"),
+			onToggle = toggleSection("Lighting"),
+			LayoutOrder = 2,
+		}, {
+			listLayout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 4),
+			}),
+			lightColorRow = e("Frame", {
+				Size = UDim2.new(1, 0, 0, 22),
+				BackgroundTransparency = 1,
+				LayoutOrder = 1,
+			}, {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 6),
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+				label = e(StudioComponents.Label, {
+					Text = "Light Color",
+					Size = UDim2.new(1, -22, 1, 0),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					LayoutOrder = 1,
+				}),
+				swatch = e("TextButton", {
+					Size = UDim2.fromOffset(16, 16),
+					BackgroundColor3 = state.lighting.lightColor,
+					BorderSizePixel = 0,
+					Text = "",
+					AutoButtonColor = false,
+					LayoutOrder = 2,
+					[React.Event.MouseButton1Click] = function()
+						local target = if state.colorPickerTarget == "lightColor" then nil else "lightColor"
+						props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+					end,
+				}, {
+					corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+					stroke = e("UIStroke", {
+						Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
+						Thickness = 1,
+					}),
+				}),
+			}),
+			ambientRow = e("Frame", {
+				Size = UDim2.new(1, 0, 0, 22),
+				BackgroundTransparency = 1,
+				LayoutOrder = 2,
+			}, {
+				layout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 6),
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+				label = e(StudioComponents.Label, {
+					Text = "Ambient",
+					Size = UDim2.new(1, -22, 1, 0),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					LayoutOrder = 1,
+				}),
+				swatch = e("TextButton", {
+					Size = UDim2.fromOffset(16, 16),
+					BackgroundColor3 = state.lighting.ambient,
+					BorderSizePixel = 0,
+					Text = "",
+					AutoButtonColor = false,
+					LayoutOrder = 2,
+					[React.Event.MouseButton1Click] = function()
+						local target = if state.colorPickerTarget == "ambient" then nil else "ambient"
+						props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+					end,
+				}, {
+					corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+					stroke = e("UIStroke", {
+						Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
+						Thickness = 1,
+					}),
+				}),
+			}),
+			directionRow = e("Frame", {
+				Size = UDim2.new(1, 0, 0, 44),
+				BackgroundTransparency = 1,
+				LayoutOrder = 3,
+			}, {
+				outerLayout = e("UIListLayout", {
+					FillDirection = Enum.FillDirection.Vertical,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					Padding = UDim.new(0, 2),
+				}),
+				header = e(StudioComponents.Label, {
+					Text = "Direction",
+					Size = UDim2.new(1, 0, 0, 18),
+					LayoutOrder = 1,
+				}),
+				inputs = e("Frame", {
+					Size = UDim2.new(1, 0, 0, 22),
+					BackgroundTransparency = 1,
+					LayoutOrder = 2,
+				}, {
+					layout = e("UIListLayout", {
+						FillDirection = Enum.FillDirection.Horizontal,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, 4),
+						VerticalAlignment = Enum.VerticalAlignment.Center,
+					}),
+					labelX = e(StudioComponents.Label, {
+						Text = "X",
+						Size = UDim2.new(0, 10, 1, 0),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						LayoutOrder = 1,
+					}),
+					axisX = e(StudioComponents.NumericInput, {
+						Value = state.lighting.lightDirectionX,
+						OnValidChanged = function(v)
+							props.dispatch({
+								type = A.SET_LIGHTING,
+								value = {
+									lightDirectionX = v,
+									lightDirectionY = state.lighting.lightDirectionY,
+									lightDirectionZ = state.lighting.lightDirectionZ,
+								},
+							})
+						end,
+						Min = -999,
+						Max = 999,
+						Step = 0.1,
+						Arrows = false,
+						Size = UDim2.new(1 / 3, -18, 1, 0),
+						LayoutOrder = 2,
+					}),
+					labelY = e(StudioComponents.Label, {
+						Text = "Y",
+						Size = UDim2.new(0, 10, 1, 0),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						LayoutOrder = 3,
+					}),
+					axisY = e(StudioComponents.NumericInput, {
+						Value = state.lighting.lightDirectionY,
+						OnValidChanged = function(v)
+							props.dispatch({
+								type = A.SET_LIGHTING,
+								value = {
+									lightDirectionX = state.lighting.lightDirectionX,
+									lightDirectionY = v,
+									lightDirectionZ = state.lighting.lightDirectionZ,
+								},
+							})
+						end,
+						Min = -999,
+						Max = 999,
+						Step = 0.1,
+						Arrows = false,
+						Size = UDim2.new(1 / 3, -18, 1, 0),
+						LayoutOrder = 4,
+					}),
+					labelZ = e(StudioComponents.Label, {
+						Text = "Z",
+						Size = UDim2.new(0, 10, 1, 0),
+						TextXAlignment = Enum.TextXAlignment.Center,
+						LayoutOrder = 5,
+					}),
+					axisZ = e(StudioComponents.NumericInput, {
+						Value = state.lighting.lightDirectionZ,
+						OnValidChanged = function(v)
+							props.dispatch({
+								type = A.SET_LIGHTING,
+								value = {
+									lightDirectionX = state.lighting.lightDirectionX,
+									lightDirectionY = state.lighting.lightDirectionY,
+									lightDirectionZ = v,
+								},
+							})
+						end,
+						Min = -999,
+						Max = 999,
+						Step = 0.1,
+						Arrows = false,
+						Size = UDim2.new(1 / 3, -18, 1, 0),
+						LayoutOrder = 6,
+					}),
+				}),
+			}),
+			syncButton = e(StudioComponents.Button, {
+				Text = "Sync Lighting",
+				Size = UDim2.new(1, 0, 0, 24),
+				LayoutOrder = 4,
+				OnActivated = function()
+					props.dispatch({ type = A.SET_LIGHTING, value = {
+						ambient = Lighting.Ambient,
+					} })
+				end,
+			}),
+		}),
+
 		-- Background section
 		background = e(CollapsibleSection, {
 			title = "Background",
 			collapsed = isCollapsed("Background"),
 			onToggle = toggleSection("Background"),
-			LayoutOrder = 2,
+			LayoutOrder = 3,
 		}, {
 			color = e("Frame", {
 				Size = UDim2.new(1, 0, 0, DROPDOWN_ROW_HEIGHT),
@@ -477,7 +678,7 @@ local function Sidebar(props: Props)
 			title = "Effects Preview",
 			collapsed = isCollapsed("EffectsPreview"),
 			onToggle = toggleSection("EffectsPreview"),
-			LayoutOrder = 3,
+			LayoutOrder = 4,
 		}, {
 			preview = e(EffectPreview, {
 				outline = state.outline,
@@ -496,7 +697,7 @@ local function Sidebar(props: Props)
 			title = "Outline",
 			collapsed = isCollapsed("Outline"),
 			onToggle = toggleSection("Outline"),
-			LayoutOrder = 4,
+			LayoutOrder = 5,
 		}, {
 			row = e(OutlineEffectRow, {
 				enabled = state.outline.enabled,
@@ -524,7 +725,7 @@ local function Sidebar(props: Props)
 			title = "Drop Shadow",
 			collapsed = isCollapsed("DropShadow"),
 			onToggle = toggleSection("DropShadow"),
-			LayoutOrder = 5,
+			LayoutOrder = 6,
 		}, {
 			row = e(ShadowEffectRow, {
 				label = "Shadow",
@@ -565,7 +766,7 @@ local function Sidebar(props: Props)
 			title = "Inner Shadow",
 			collapsed = isCollapsed("InnerShadow"),
 			onToggle = toggleSection("InnerShadow"),
-			LayoutOrder = 6,
+			LayoutOrder = 7,
 		}, {
 			row = e(ShadowEffectRow, {
 				label = "Inner",
@@ -606,7 +807,7 @@ local function Sidebar(props: Props)
 			title = "Outer Glow",
 			collapsed = isCollapsed("OuterGlow"),
 			onToggle = toggleSection("OuterGlow"),
-			LayoutOrder = 7,
+			LayoutOrder = 8,
 		}, {
 			row = e(OuterGlowEffectRow, {
 				enabled = state.outerGlow.enabled,
@@ -642,7 +843,7 @@ local function Sidebar(props: Props)
 			title = "Chromatic Aberration",
 			collapsed = isCollapsed("ChromaticAberration"),
 			onToggle = toggleSection("ChromaticAberration"),
-			LayoutOrder = 8,
+			LayoutOrder = 9,
 		}, {
 			row = e(ChromaticAberrationEffectRow, {
 				enabled = state.chromaticAberration.enabled,

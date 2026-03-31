@@ -68,6 +68,34 @@ local function deserializeOutline(t)
 	}
 end
 
+local DEFAULT_LIGHTING = {
+	lightColor = Color3.new(1, 1, 1),
+	ambient = Color3.fromRGB(160, 160, 160),
+	lightDirectionX = -1,
+	lightDirectionY = -2,
+	lightDirectionZ = -1,
+}
+
+local function serializeLighting(l)
+	return {
+		lightColor = serializeColor(l.lightColor),
+		ambient = serializeColor(l.ambient),
+		lightDirectionX = l.lightDirectionX,
+		lightDirectionY = l.lightDirectionY,
+		lightDirectionZ = l.lightDirectionZ,
+	}
+end
+
+local function deserializeLighting(t)
+	return {
+		lightColor = deserializeColor(t.lightColor),
+		ambient = deserializeColor(t.ambient),
+		lightDirectionX = t.lightDirectionX or -1,
+		lightDirectionY = t.lightDirectionY or -2,
+		lightDirectionZ = t.lightDirectionZ or -1,
+	}
+end
+
 local Serialization = {}
 
 function Serialization.serialize(presets: { any }): { any }
@@ -96,6 +124,7 @@ function Serialization.serialize(presets: { any }): { any }
 				opacity = preset.chromaticAberration.opacity,
 				angle = preset.chromaticAberration.angle,
 			},
+			lighting = serializeLighting(preset.lighting),
 		})
 	end
 	return result
@@ -129,6 +158,7 @@ function Serialization.deserialize(raw: { any }): { any }
 					angle = t.chromaticAberration.angle or 45,
 				}
 				else { enabled = false, distance = 4, opacity = 100, angle = 45 },
+			lighting = if t.lighting then deserializeLighting(t.lighting) else DEFAULT_LIGHTING,
 		})
 	end
 	return result

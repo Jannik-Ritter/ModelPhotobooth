@@ -184,6 +184,7 @@ local function App(props: Props)
 			innerShadow = state.innerShadow,
 			outerGlow = state.outerGlow,
 			chromaticAberration = state.chromaticAberration,
+			lighting = state.lighting,
 			bgMode = state.bgMode,
 			bgColor = state.bgColor,
 			exportSize = state.exportSize,
@@ -718,6 +719,7 @@ local function App(props: Props)
 						}, {
 							Side0 = e(PreviewViewport, {
 								entry = activeEntry,
+								lighting = state.lighting,
 								yaw = state.yaw,
 								pitch = state.pitch,
 								roll = state.roll,
@@ -910,6 +912,18 @@ local function App(props: Props)
 							color = state.bgColor
 							onPickerColor = function(c)
 								dispatch({ type = A.SET_BG_COLOR, value = c })
+							end
+						elseif target == "lightColor" then
+							title = "Light Color"
+							color = state.lighting.lightColor
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_LIGHTING, value = { lightColor = c } })
+							end
+						elseif target == "ambient" then
+							title = "Ambient Color"
+							color = state.lighting.ambient
+							onPickerColor = function(c)
+								dispatch({ type = A.SET_LIGHTING, value = { ambient = c } })
 							end
 						else
 							title = "Outer Glow Color"

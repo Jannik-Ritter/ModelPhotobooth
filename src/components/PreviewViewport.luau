@@ -74,6 +74,13 @@ type Props = {
 	onSetPlaying: (playing: boolean) -> (),
 	onSetTimePosition: (time: number) -> (),
 	onSetLength: (length: number) -> (),
+	lighting: {
+		lightColor: Color3,
+		ambient: Color3,
+		lightDirectionX: number,
+		lightDirectionY: number,
+		lightDirectionZ: number,
+	},
 }
 
 type CameraState = {
@@ -633,9 +640,9 @@ local function PreviewViewport(props: Props)
 			Size = UDim2.fromScale(1, 1),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 			BorderSizePixel = 0,
-			Ambient = Color3.fromRGB(160, 160, 160),
-			LightDirection = Vector3.new(-1, -2, -1),
-			LightColor = Color3.new(1, 1, 1),
+			Ambient = props.lighting.ambient,
+			LightDirection = Vector3.new(props.lighting.lightDirectionX, props.lighting.lightDirectionY, props.lighting.lightDirectionZ),
+			LightColor = props.lighting.lightColor,
 		}, {
 			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
 			aspectOverlay = aspectOverlay,
