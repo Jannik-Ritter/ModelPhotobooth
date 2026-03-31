@@ -12,6 +12,7 @@ local ShadowEffectRow = require(script.Parent.effects.ShadowEffectRow)
 local OuterGlowEffectRow = require(script.Parent.effects.OuterGlowEffectRow)
 local ChromaticAberrationEffectRow = require(script.Parent.effects.ChromaticAberrationEffectRow)
 local SliderRow = require(script.Parent.effects.SliderRow)
+local limitDecimals = require(script.Parent.Parent.utils.limitDecimals)
 
 local e = React.createElement
 
@@ -51,6 +52,10 @@ local function Sidebar(props: Props)
 	local A = Store.ACTIONS
 	local theme = StudioComponents.useTheme()
 	local selectedTab, setSelectedTab = React.useState("Settings")
+
+	local formatCameraOffset = function(value: number): string
+		return limitDecimals(value, 3)
+	end
 
 	local function isCollapsed(section: string): boolean
 		return state.collapsedSections[section] == true
@@ -332,6 +337,8 @@ local function Sidebar(props: Props)
 					}),
 					axisX = e(StudioComponents.NumericInput, {
 						Value = state.cameraOffsetX,
+						FormatValue = formatCameraOffset,
+						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
 							props.dispatch({
 								type = A.SET_CAMERA_OFFSET,
@@ -355,6 +362,8 @@ local function Sidebar(props: Props)
 					}),
 					axisY = e(StudioComponents.NumericInput, {
 						Value = state.cameraOffsetY,
+						FormatValue = formatCameraOffset,
+						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
 							props.dispatch({
 								type = A.SET_CAMERA_OFFSET,
@@ -378,6 +387,8 @@ local function Sidebar(props: Props)
 					}),
 					axisZ = e(StudioComponents.NumericInput, {
 						Value = state.cameraOffsetZ,
+						FormatValue = formatCameraOffset,
+						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
 							props.dispatch({
 								type = A.SET_CAMERA_OFFSET,

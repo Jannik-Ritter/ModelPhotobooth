@@ -64,7 +64,7 @@ local function ColorPickerModal(props: Props)
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(300, 391),
+			Size = UDim2.fromOffset(360, 391),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
@@ -94,7 +94,7 @@ local function ColorPickerModal(props: Props)
 					Position = UDim2.fromOffset(10, 0),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 13,
+					TextSize = 18,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 				}),

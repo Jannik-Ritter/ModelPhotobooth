@@ -69,9 +69,8 @@ local function App(props: Props)
 			return next
 		end)
 	end
-	local helpOpen, setHelpOpen = React.useState(
-		if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else false
-	)
+	local helpOpen, setHelpOpen =
+		React.useState(if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else false)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
 	-- Drives PreviewViewport cursor; ref-based isShiftDown() does not re-render children on key repeat

@@ -57,7 +57,7 @@ local function ImagePreviewModal(props: Props)
 					Position = UDim2.fromOffset(10, 0),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 17,
+					TextSize = 18,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextTruncate = Enum.TextTruncate.AtEnd,

@@ -20,7 +20,7 @@ local function ProgressModal(props: Props)
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(280, 88),
+			Size = UDim2.fromOffset(340, 96),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
@@ -44,13 +44,13 @@ local function ProgressModal(props: Props)
 					Position = UDim2.fromOffset(10, 0),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 13,
+					TextSize = 18,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 				}),
 			}),
 			body = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 56),
+				Size = UDim2.new(1, 0, 0, 64),
 				Position = UDim2.fromOffset(0, 32),
 				BackgroundTransparency = 1,
 			}, {
@@ -60,7 +60,7 @@ local function ProgressModal(props: Props)
 					Position = UDim2.fromOffset(0, 8),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 13,
+					TextSize = 16,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Center,
 				}),

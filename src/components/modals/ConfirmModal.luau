@@ -19,12 +19,12 @@ local function ConfirmModal(props: Props)
 	local theme = StudioComponents.useTheme()
 	local confirmLabel = props.confirmLabel or "Confirm"
 
-	-- Panel height: 32 (title) + 46 (body) + 40 (footer) = 118
+	-- Panel height: 32 (title) + 54 (body) + 40 (footer) = 126
 	return e(Darkener, {
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(300, 118),
+			Size = UDim2.fromOffset(360, 126),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
@@ -54,7 +54,7 @@ local function ConfirmModal(props: Props)
 					Position = UDim2.fromOffset(10, 0),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 13,
+					TextSize = 18,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 				}),
@@ -64,7 +64,7 @@ local function ConfirmModal(props: Props)
 			}),
 
 			body = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 46),
+				Size = UDim2.new(1, 0, 0, 54),
 				BackgroundTransparency = 1,
 				LayoutOrder = 2,
 			}, {
@@ -74,7 +74,7 @@ local function ConfirmModal(props: Props)
 					Position = UDim2.fromOffset(8, 0),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 13,
+					TextSize = 16,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextWrapped = true,
