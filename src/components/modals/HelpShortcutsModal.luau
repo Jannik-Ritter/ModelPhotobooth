@@ -103,14 +103,12 @@ local function HelpShortcutsModal(props: Props)
 	}, {
 		usageHeader = sectionHeader(theme, "Usage", 1),
 		usageBody = e("TextLabel", {
-			Text = table.concat({
-				"Select a model or part in the Explorer. It shows up in the strip under the preview. ",
-				"The right panel holds camera, effects, animation, and export settings. Presets save those settings.",
-				"Use the preview controls to render, then Export to place the result in Workspace. ",
-				"To view a render before exporting, click on the icon on the model strip. ",
-				"Use Upload All to send every rendered image to Roblox as an image asset, or open a preview and click Upload to upload just that image. ",
-				'Then Simply right-click the exported results and select "Export as OBJ" to export the image(s). ',
-			}, ""),
+			Text = "Select a model or part in the Explorer to add it to the Models strip.\n"
+				.. "The right panel contains camera, effects, animation, and export settings. Save your favorites as presets.\n"
+				.. "Click Preview to render, then Export to place the result in Workspace, or Upload to save directly to Roblox.\n"
+				.. "Click any render in the Renders strip to view it before exporting.\n"
+				.. 'To save as a PNG, export first, then right-click the result and choose "Save/Export" -> "Export as Obj".\n'
+				.. "To render with animation, place a compatible Animation instance inside the model.",
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
@@ -174,6 +172,18 @@ local function HelpShortcutsModal(props: Props)
 		spacer1 = spacer(3),
 		uploadHeader = sectionHeader(theme, "Upload failed", 4),
 		uploadBody = bodyText(theme, "Enable the CreateAssetAsync Lua API Beta in Studio settings.", 5),
+		spacerContact = spacer(6),
+		contactBody = e("TextLabel", {
+			Text = "Didn't find your issue? Message me @Chahier",
+			Size = UDim2.new(1, 0, 0, 18),
+			BackgroundTransparency = 1,
+			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.SubText),
+			TextSize = CONTENT_TEXT_SIZE,
+			Font = Enum.Font.SourceSans,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			LayoutOrder = 7,
+		}),
 	})
 
 	-- Title 32 + tab container 285 (backdrop does not dismiss; only titlebar close)

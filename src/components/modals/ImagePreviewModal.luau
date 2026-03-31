@@ -21,6 +21,7 @@ type Props = {
 	hasNext: boolean,
 	rendering: boolean,
 	uploading: boolean,
+	hideRerender: boolean?,
 }
 
 local function ImagePreviewModal(props: Props)
@@ -106,27 +107,27 @@ local function ImagePreviewModal(props: Props)
 				padding = e("UIPadding", {
 					PaddingRight = UDim.new(0, 8),
 				}),
-				rerender = e(StudioComponents.Button, {
-					Text = "Re-render",
-					OnActivated = props.onRerender,
-					Disabled = props.rendering,
-					Size = UDim2.fromOffset(80, 24),
-					LayoutOrder = 1,
-				}),
-				upload = e(StudioComponents.Button, {
-					Text = "Upload",
-					OnActivated = props.onUpload,
-					Disabled = props.rendering or props.uploading,
-					Size = UDim2.fromOffset(64, 24),
-					LayoutOrder = 2,
-				}),
-				exportThis = e(StudioComponents.MainButton, {
-					Text = "Export This",
-					OnActivated = props.onExport,
-					Disabled = props.rendering,
-					Size = UDim2.fromOffset(84, 24),
-					LayoutOrder = 3,
-				}),
+			rerender = if not props.hideRerender then e(StudioComponents.Button, {
+				Text = "Re-render",
+				OnActivated = props.onRerender,
+				Disabled = props.rendering,
+				Size = UDim2.fromOffset(80, 24),
+				LayoutOrder = 1,
+			}) else nil,
+			upload = e(StudioComponents.Button, {
+				Text = "Upload",
+				OnActivated = props.onUpload,
+				Disabled = props.rendering or props.uploading,
+				Size = UDim2.fromOffset(64, 24),
+				LayoutOrder = 2,
+			}),
+			exportThis = e(StudioComponents.MainButton, {
+				Text = "Export This",
+				OnActivated = props.onExport,
+				Disabled = props.rendering,
+				Size = UDim2.fromOffset(84, 24),
+				LayoutOrder = 3,
+			}),
 			}),
 		}),
 	})

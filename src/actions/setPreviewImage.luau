@@ -5,5 +5,6 @@ return function(state, action)
 		previewImage = if action.image == nil then M.CLEAR else action.image,
 		previewTitle = if action.title == nil then M.CLEAR else action.title,
 		previewModelIndex = if action.index == nil then M.CLEAR else action.index,
+		previewHistoryIndex = if action.historyIndex == nil then M.CLEAR else action.historyIndex,
 	})
 end

@@ -32,6 +32,7 @@ Store.ACTIONS = {
 	SET_ANIMATION_PLAYING = "SET_ANIMATION_PLAYING",
 	SET_ANIMATION_TIME = "SET_ANIMATION_TIME",
 	SET_ANIMATION_LENGTH = "SET_ANIMATION_LENGTH",
+	SET_RENDER_HISTORY_ENTRY = "SET_RENDER_HISTORY_ENTRY",
 }
 
 export type AnimationInfo = {
@@ -40,6 +41,12 @@ export type AnimationInfo = {
 }
 
 export type RenderStatus = "idle" | "pending" | "ok" | "fail"
+
+export type RenderHistoryEntry = {
+	image: EditableImage,
+	modelName: string,
+	modelIndex: number?,
+}
 
 export type ModelEntry = {
 	instance: Instance,
@@ -141,6 +148,7 @@ export type AppState = {
 	bgColor: Color3,
 	exportSize: number,
 	models: { ModelEntry },
+	renderHistory: { RenderHistoryEntry },
 	rendering: boolean,
 	renderProgress: number,
 	renderTotal: number,
@@ -150,6 +158,7 @@ export type AppState = {
 	previewImage: EditableImage?,
 	previewTitle: string?,
 	previewModelIndex: number?,
+	previewHistoryIndex: number?,
 	presets: { PresetEntry },
 	nameInputModal: NameInputModalState?,
 	animations: { AnimationInfo },
@@ -184,6 +193,7 @@ Store.DEFAULT_STATE = {
 	bgColor = Color3.new(1, 1, 1),
 	exportSize = 0,
 	models = {},
+	renderHistory = {},
 	rendering = false,
 	renderProgress = 0,
 	renderTotal = 0,
@@ -193,6 +203,7 @@ Store.DEFAULT_STATE = {
 	previewImage = nil,
 	previewTitle = nil,
 	previewModelIndex = nil,
+	previewHistoryIndex = nil,
 	presets = {},
 	nameInputModal = nil,
 	animations = {},
@@ -249,6 +260,7 @@ local handlers = {
 	[A.SET_ANIMATION_PLAYING] = createSetter("animationPlaying"),
 	[A.SET_ANIMATION_TIME] = createSetter("animationTimePosition"),
 	[A.SET_ANIMATION_LENGTH] = createSetter("animationLength"),
+	[A.SET_RENDER_HISTORY_ENTRY] = require(actions.setRenderHistoryEntry),
 }
 
 function Store.reducer(state: AppState, action): AppState

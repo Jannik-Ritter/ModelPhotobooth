@@ -13,6 +13,7 @@ local PresetSerialization = require(script.Parent.lib.presetSerialization)
 local ToolbarStrip = require(script.Parent.components.ToolbarStrip)
 local PreviewViewport = require(script.Parent.components.PreviewViewport)
 local ModelStrip = require(script.Parent.components.ModelStrip)
+local RenderStrip = require(script.Parent.components.RenderStrip)
 local Sidebar = require(script.Parent.components.Sidebar)
 local ImagePreviewModal = require(script.Parent.components.modals.ImagePreviewModal)
 local ColorPickerModal = require(script.Parent.components.modals.ColorPickerModal)
@@ -74,6 +75,7 @@ local function App(props: Props)
 		React.useState(if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else false)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
+	local stripTab, setStripTab = React.useState("Models")
 	-- Drives PreviewViewport cursor; ref-based isShiftDown() does not re-render children on key repeat
 	local shiftDown, setShiftDown = React.useState(false)
 
@@ -298,6 +300,14 @@ local function App(props: Props)
 					status = if ok then "ok" else "fail",
 					image = if ok then img else nil,
 				})
+				if ok and img then
+					dispatch({
+						type = Store.ACTIONS.SET_RENDER_HISTORY_ENTRY,
+						image = img,
+						modelName = target.entry.instance.Name,
+						modelIndex = target.index,
+					})
+				end
 				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i, total = #targets })
 				task.wait()
 			end
@@ -360,6 +370,14 @@ local function App(props: Props)
 					status = if ok then "ok" else "fail",
 					image = if ok then img else nil,
 				})
+				if ok and img then
+					dispatch({
+						type = Store.ACTIONS.SET_RENDER_HISTORY_ENTRY,
+						image = img,
+						modelName = target.entry.instance.Name,
+						modelIndex = target.index,
+					})
+				end
 				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i, total = #targets })
 				task.wait()
 			end
@@ -409,6 +427,71 @@ local function App(props: Props)
 				Selection:Set(parts)
 			end)
 		end
+	end
+
+	-- Upload only the currently previewed model's image
+	local function uploadPreview()
+		if uploadingRef.current then
+			return
+		end
+		local idx = state.previewModelIndex
+		if not idx then
+			return
+		end
+		local entry = state.models[idx]
+		if not entry or not entry.image then
+			return
+		end
+		uploadingRef.current = true
+		setUploading(true)
+		setUploadTotal(1)
+		setUploadProgress(0)
+		task.spawn(function()
+			local ok, assetId = uploadOne(entry.image :: EditableImage, entry.instance.Name)
+			uploadingRef.current = false
+			setUploading(false)
+			setUploadTotal(0)
+			setUploadProgress(0)
+			setUploadResults({ { name = entry.instance.Name, assetId = if ok then assetId else nil } })
+		end)
+	end
+
+	-- Export the currently previewed image (works for history entries too)
+	local function exportPreviewImage()
+		if not state.previewImage then
+			return
+		end
+		local tempEntry = {
+			instance = { Name = state.previewTitle or "Render" },
+			image = state.previewImage,
+			status = "ok" :: Store.RenderStatus,
+			isExported = false,
+		}
+		local parts = exportAll({ tempEntry })
+		if #parts > 0 then
+			pcall(function()
+				Selection:Set(parts)
+			end)
+		end
+	end
+
+	-- Upload the currently previewed image (works for history entries too)
+	local function uploadPreviewImage()
+		if uploadingRef.current or not state.previewImage then
+			return
+		end
+		uploadingRef.current = true
+		setUploading(true)
+		setUploadTotal(1)
+		setUploadProgress(0)
+		task.spawn(function()
+			local ok, assetId = uploadOne(state.previewImage :: EditableImage, state.previewTitle or "Render")
+			uploadingRef.current = false
+			setUploading(false)
+			setUploadTotal(0)
+			setUploadProgress(0)
+			setUploadResults({ { name = state.previewTitle or "Render", assetId = if ok then assetId else nil } })
+		end)
 	end
 
 	-- Re-render only the currently previewed model
@@ -562,33 +645,6 @@ local function App(props: Props)
 		end)
 	end
 
-	-- Upload only the currently previewed model's image
-	local function uploadPreview()
-		if uploadingRef.current then
-			return
-		end
-		local idx = state.previewModelIndex
-		if not idx then
-			return
-		end
-		local entry = state.models[idx]
-		if not entry or not entry.image then
-			return
-		end
-		uploadingRef.current = true
-		setUploading(true)
-		setUploadTotal(1)
-		setUploadProgress(0)
-		task.spawn(function()
-			local ok, assetId = uploadOne(entry.image :: EditableImage, entry.instance.Name)
-			uploadingRef.current = false
-			setUploading(false)
-			setUploadTotal(0)
-			setUploadProgress(0)
-			setUploadResults({ { name = entry.instance.Name, assetId = if ok then assetId else nil } })
-		end)
-	end
-
 	-- Trackball handler
 	local function onTrackball(dYaw: number, dPitch: number)
 		dispatch({
@@ -682,6 +738,20 @@ local function App(props: Props)
 		end
 	end
 
+	local prevHistoryIndex = nil
+	local nextHistoryIndex = nil
+	local previewHistIdx = state.previewHistoryIndex
+	if previewHistIdx then
+		if previewHistIdx > 1 then
+			prevHistoryIndex = previewHistIdx - 1
+		end
+		if previewHistIdx < #state.renderHistory then
+			nextHistoryIndex = previewHistIdx + 1
+		end
+	end
+
+	local previewFromHistory = state.previewHistoryIndex ~= nil
+
 	return e(StudioComponents.PluginProvider, {
 		Plugin = props.plugin,
 	}, {
@@ -755,51 +825,84 @@ local function App(props: Props)
 								onSetTimePosition = onSetAnimationTimePosition,
 								onSetLength = onSetAnimationLength,
 							}),
-							Side1 = e(ModelStrip, {
-								models = state.models,
-								selectedModelIndices = state.selectedModelIndices,
-								lighting = state.lighting,
-								yaw = state.yaw,
-								pitch = state.pitch,
-								roll = state.roll,
-								fov = state.fov,
-								cameraDistance = state.cameraDistance,
-								offsetX = state.cameraOffsetX,
-								offsetY = state.cameraOffsetY,
-								offsetZ = state.cameraOffsetZ,
-								onSelectModel = function(index)
-									local ctrlDown = isCtrlDown()
-									if ctrlDown then
-										-- Toggle this index in the selection
-										local next = {}
-										local found = false
-										for _, i in ipairs(state.selectedModelIndices) do
-											if i == index then
-												found = true
-											else
-												table.insert(next, i)
-											end
-										end
-										if not found then
-											table.insert(next, index)
-										end
-										dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
-									else
-										dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
-										dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = nil })
-									end
-								end,
-								onPreviewModel = function(index)
-									local entry = state.models[index]
-									if entry and entry.image then
-										dispatch({
-											type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-											image = entry.image,
-											title = entry.instance.Name,
-											index = index,
-										})
-									end
-								end,
+							Side1 = e("Frame", {
+								Size = UDim2.fromScale(1, 1),
+								BackgroundTransparency = 1,
+							}, {
+								tabs = e(StudioComponents.TabContainer, {
+									Size = UDim2.fromScale(1, 1),
+									SelectedTab = stripTab,
+									OnTabSelected = setStripTab,
+								}, {
+									["Models"] = {
+										LayoutOrder = 1,
+										Content = e(ModelStrip, {
+											models = state.models,
+											selectedModelIndices = state.selectedModelIndices,
+											lighting = state.lighting,
+											yaw = state.yaw,
+											pitch = state.pitch,
+											roll = state.roll,
+											fov = state.fov,
+											cameraDistance = state.cameraDistance,
+											offsetX = state.cameraOffsetX,
+											offsetY = state.cameraOffsetY,
+											offsetZ = state.cameraOffsetZ,
+											onSelectModel = function(index)
+												local ctrlDown = isCtrlDown()
+												if ctrlDown then
+													local next = {}
+													local found = false
+													for _, i in ipairs(state.selectedModelIndices) do
+														if i == index then
+															found = true
+														else
+															table.insert(next, i)
+														end
+													end
+													if not found then
+														table.insert(next, index)
+													end
+													dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
+												else
+													dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
+													dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = nil })
+												end
+											end,
+											onPreviewModel = function(index)
+												local entry = state.models[index]
+												if entry and entry.image then
+													dispatch({
+														type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+														image = entry.image,
+														title = entry.instance.Name,
+														index = index,
+														historyIndex = nil,
+													})
+												end
+											end,
+										}),
+									},
+									["Renders"] = {
+										LayoutOrder = 2,
+										Content = e(RenderStrip, {
+											renderHistory = state.renderHistory,
+											previewHistoryIndex = state.previewHistoryIndex,
+											onPreviewRender = function(index)
+												local entry = state.renderHistory[index]
+												if entry then
+													dispatch({
+														type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+														image = entry.image,
+														title = entry.modelName,
+														index = nil,
+														historyIndex = index,
+													})
+												end
+											end,
+										}),
+									},
+								}),
 							}),
 						}),
 						Side1 = e(Sidebar, {
@@ -837,25 +940,40 @@ local function App(props: Props)
 					})
 					else nil,
 				imagePreview = if state.previewImage
-					then e(ImagePreviewModal, {
-						image = state.previewImage,
-						title = state.previewTitle or "Preview",
-						rendering = state.rendering,
-						hasPrev = prevRenderedIndex ~= nil,
-						hasNext = nextRenderedIndex ~= nil,
-						onClose = function()
-							dispatch({
-								type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-								image = nil,
-								title = nil,
-								index = nil,
-							})
-						end,
-						onExport = exportPreview,
-						onUpload = uploadPreview,
-						onRerender = rerenderPreview,
-						uploading = uploading,
-						onPrev = if prevRenderedIndex
+				then e(ImagePreviewModal, {
+					image = state.previewImage,
+					title = state.previewTitle or "Preview",
+					rendering = state.rendering,
+					hasPrev = if previewFromHistory then prevHistoryIndex ~= nil else prevRenderedIndex ~= nil,
+					hasNext = if previewFromHistory then nextHistoryIndex ~= nil else nextRenderedIndex ~= nil,
+					onClose = function()
+						dispatch({
+							type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+							image = nil,
+							title = nil,
+							index = nil,
+							historyIndex = nil,
+						})
+					end,
+					onExport = exportPreviewImage,
+					onUpload = uploadPreviewImage,
+					onRerender = rerenderPreview,
+					uploading = uploading,
+					hideRerender = previewFromHistory,
+					onPrev = if previewFromHistory
+						then (if prevHistoryIndex
+							then function()
+								local entry = state.renderHistory[prevHistoryIndex]
+								dispatch({
+									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+									image = entry.image,
+									title = entry.modelName,
+									index = nil,
+									historyIndex = prevHistoryIndex,
+								})
+							end
+							else nil)
+						else (if prevRenderedIndex
 							then function()
 								local entry = state.models[prevRenderedIndex]
 								dispatch({
@@ -863,10 +981,24 @@ local function App(props: Props)
 									image = entry.image,
 									title = entry.instance.Name,
 									index = prevRenderedIndex,
+									historyIndex = nil,
 								})
 							end
-							else nil,
-						onNext = if nextRenderedIndex
+							else nil),
+					onNext = if previewFromHistory
+						then (if nextHistoryIndex
+							then function()
+								local entry = state.renderHistory[nextHistoryIndex]
+								dispatch({
+									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+									image = entry.image,
+									title = entry.modelName,
+									index = nil,
+									historyIndex = nextHistoryIndex,
+								})
+							end
+							else nil)
+						else (if nextRenderedIndex
 							then function()
 								local entry = state.models[nextRenderedIndex]
 								dispatch({
@@ -874,11 +1006,12 @@ local function App(props: Props)
 									image = entry.image,
 									title = entry.instance.Name,
 									index = nextRenderedIndex,
+									historyIndex = nil,
 								})
 							end
-							else nil,
-					})
-					else nil,
+							else nil),
+				})
+				else nil,
 				deleteConfirmModal = if deleteConfirmIndex ~= nil
 					then e(ConfirmModal, {
 						title = "Delete Preset",

@@ -44,40 +44,27 @@ local function ModelThumb(props: Props)
 	local theme = StudioComponents.useTheme()
 	local hovered, setHovered = React.useState(false)
 
-	-- Show captured image if available
+	-- Always show live ViewportFrame; rendered images go to the Renders tab
 	local s = props.thumbSize
-	local contentH = s - NAME_ROW_HEIGHT - 4 -- 2px top inset + 2px gap above name row
-
-	local content
-	if props.entry.image then
-		content = e("ImageLabel", {
-			Size = UDim2.fromOffset(s - 4, contentH),
-			Position = UDim2.fromOffset(2, 2),
-			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
-			BorderSizePixel = 0,
-			ImageContent = Content.fromObject(props.entry.image),
-			ScaleType = Enum.ScaleType.Fit,
-		}, {})
-	else
-		content = e(ModelViewport, {
-			instance = props.entry.instance,
-			lighting = props.lighting,
-			camera = {
-				yaw = props.yaw,
-				pitch = props.pitch,
-				roll = props.roll,
-				fov = props.fov,
-				cameraDistance = props.cameraDistance,
-				offsetX = props.offsetX,
-				offsetY = props.offsetY,
-				offsetZ = props.offsetZ,
-			},
-			Size = UDim2.fromOffset(s - 4, contentH),
-			Position = UDim2.fromOffset(2, 2),
-			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
-			BorderSizePixel = 0,
-		}, {})
-	end
+	local contentH = s - NAME_ROW_HEIGHT - 4
+	local content = e(ModelViewport, {
+		instance = props.entry.instance,
+		lighting = props.lighting,
+		camera = {
+			yaw = props.yaw,
+			pitch = props.pitch,
+			roll = props.roll,
+			fov = props.fov,
+			cameraDistance = props.cameraDistance,
+			offsetX = props.offsetX,
+			offsetY = props.offsetY,
+			offsetZ = props.offsetZ,
+		},
+		Size = UDim2.fromOffset(s - 4, contentH),
+		Position = UDim2.fromOffset(2, 2),
+		BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
+		BorderSizePixel = 0,
+	}, {})
 
 	-- Magnify icon centered over the content area
 	local previewIcon = nil
