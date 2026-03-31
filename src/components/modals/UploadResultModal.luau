@@ -16,6 +16,7 @@ export type UploadResult = {
 type Props = {
 	results: { UploadResult },
 	onClose: () -> (),
+	onHelp: (() -> ())?,
 }
 
 -- Panel: 420px wide. With 8px padding each side, content width = 404px.
@@ -124,9 +125,18 @@ end
 local function UploadResultModal(props: Props)
 	local theme = StudioComponents.useTheme()
 
+	local hasFailed = false
+	for _, result in ipairs(props.results) do
+		if result.assetId == nil then
+			hasFailed = true
+			break
+		end
+	end
+
 	-- Body height: up to 5 rows visible, then scrolls
 	local rowSpacing = ROW_H + 6
 	local bodyHeight = math.min(#props.results * rowSpacing + 6, 5 * rowSpacing + 6)
+	local footerHeight = if hasFailed and props.onHelp then 36 else 0
 
 	local rows: { [string]: any } = {
 		layout = e("UIListLayout", {
@@ -149,12 +159,12 @@ local function UploadResultModal(props: Props)
 		})
 	end
 
-	-- 32 title + 26 hint + bodyHeight
+	-- 32 title + 26 hint + bodyHeight [+ footerHeight]
 	return e(Darkener, {
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(PANEL_W, 32 + 26 + bodyHeight),
+			Size = UDim2.fromOffset(PANEL_W, 32 + 26 + bodyHeight + footerHeight),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),
@@ -198,7 +208,7 @@ local function UploadResultModal(props: Props)
 				TextXAlignment = Enum.TextXAlignment.Center,
 			}),
 			body = e("ScrollingFrame", {
-				Size = UDim2.new(1, 0, 1, -58),
+				Size = UDim2.fromOffset(PANEL_W, bodyHeight),
 				Position = UDim2.fromOffset(0, 58),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
@@ -208,6 +218,26 @@ local function UploadResultModal(props: Props)
 				ScrollBarImageColor3 = theme:GetColor(Enum.StudioStyleGuideColor.ScrollBar),
 				ScrollingDirection = Enum.ScrollingDirection.Y,
 			}, rows),
+			footer = if footerHeight > 0
+				then e("Frame", {
+					Size = UDim2.fromOffset(PANEL_W, footerHeight),
+					Position = UDim2.fromOffset(0, 58 + bodyHeight),
+					BackgroundTransparency = 1,
+				}, {
+					border = e("Frame", {
+						Size = UDim2.new(1, 0, 0, 1),
+						BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Border),
+						BorderSizePixel = 0,
+					}),
+					helpBtn = e(StudioComponents.Button, {
+						Text = "Open Common Issues",
+						Size = UDim2.fromOffset(140, 22),
+						Position = UDim2.fromScale(0.5, 0.5),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						OnActivated = props.onHelp,
+					}),
+				})
+				else nil,
 		}),
 	})
 end

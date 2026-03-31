@@ -9,6 +9,7 @@ local e = React.createElement
 
 type Props = {
 	onClose: () -> (),
+	initialTab: string?,
 }
 
 local ROW_HEIGHT = 22
@@ -31,16 +32,9 @@ local function sectionHeader(theme, text: string, layoutOrder: number)
 	})
 end
 
-local function guideText(theme, layoutOrder: number)
+local function bodyText(theme, text: string, layoutOrder: number)
 	return e("TextLabel", {
-		Text = table.concat({
-			"Select a model or part in the Explorer. It shows up in the strip under the preview. ",
-			"The right panel holds camera, effects, animation, and export settings. Presets save those settings.",
-			"Use the preview controls to render, then Export to place the result in Workspace. ",
-			"To view a render before exporting, click on the icon on the model strip. ",
-			"Use Upload All to send every rendered image to Roblox as an image asset, or open a preview and click Upload to upload just that image. ",
-			'Then Simply right-click the exported results and select "Export as OBJ" to export the image(s). ',
-		}, ""),
+		Text = text,
 		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
@@ -81,10 +75,105 @@ local function shortcutRow(keys: string, description: string, layoutOrder: numbe
 	})
 end
 
+local function spacer(layoutOrder: number)
+	return e("Frame", {
+		Size = UDim2.new(1, 0, 0, SECTION_GAP),
+		BackgroundTransparency = 1,
+		LayoutOrder = layoutOrder,
+	})
+end
+
 local function HelpShortcutsModal(props: Props)
 	local theme = StudioComponents.useTheme()
+	local selectedTab, setSelectedTab = React.useState(props.initialTab or "General")
 
-	-- Title 32 + scroll 220 (backdrop does not dismiss; only titlebar close)
+	local generalContent = e(StudioComponents.ScrollFrame, {
+		Size = UDim2.fromScale(1, 1),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		Layout = {
+			ClassName = "UIListLayout",
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 4),
+		},
+		PaddingLeft = UDim.new(0, 12),
+		PaddingRight = UDim.new(0, 12),
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
+	}, {
+		usageHeader = sectionHeader(theme, "Usage", 1),
+		usageBody = e("TextLabel", {
+			Text = table.concat({
+				"Select a model or part in the Explorer. It shows up in the strip under the preview. ",
+				"The right panel holds camera, effects, animation, and export settings. Presets save those settings.",
+				"Use the preview controls to render, then Export to place the result in Workspace. ",
+				"To view a render before exporting, click on the icon on the model strip. ",
+				"Use Upload All to send every rendered image to Roblox as an image asset, or open a preview and click Upload to upload just that image. ",
+				'Then Simply right-click the exported results and select "Export as OBJ" to export the image(s). ',
+			}, ""),
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
+			TextSize = CONTENT_TEXT_SIZE,
+			Font = Enum.Font.SourceSans,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			TextWrapped = true,
+			LayoutOrder = 2,
+		}),
+		spacerGuide = spacer(3),
+		kbHeader = sectionHeader(theme, "Keyboard", 4),
+		r1 = shortcutRow("Space", "Play or pause animation", 5),
+		spacer1 = spacer(6),
+		selHeader = sectionHeader(theme, "Selection", 7),
+		r2 = shortcutRow("Ctrl + click", "Add or remove a model in multi-selection", 8),
+		spacer2 = spacer(9),
+		prevHeader = sectionHeader(theme, "Preview (mouse)", 10),
+		r3 = shortcutRow("Shift + drag", "Pan the camera", 11),
+		r4 = shortcutRow("Scroll wheel", "Zoom camera distance", 12),
+		r5 = shortcutRow("Ctrl + scroll", "Adjust field of view", 13),
+		spacerCredits = spacer(14),
+		creditsHeader = sectionHeader(theme, "Credits", 15),
+		creditsBody = e("TextLabel", {
+			Text = "CahwarDev for inspiration",
+			Size = UDim2.new(1, 0, 0, 18),
+			BackgroundTransparency = 1,
+			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
+			TextSize = CONTENT_TEXT_SIZE,
+			Font = Enum.Font.SourceSans,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			LayoutOrder = 16,
+		}),
+	})
+
+	local issuesContent = e(StudioComponents.ScrollFrame, {
+		Size = UDim2.fromScale(1, 1),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		Layout = {
+			ClassName = "UIListLayout",
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 4),
+		},
+		PaddingLeft = UDim.new(0, 12),
+		PaddingRight = UDim.new(0, 12),
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
+	}, {
+		viewportHeader = sectionHeader(theme, "Viewport too small", 1),
+		viewportBody = bodyText(
+			theme,
+			"Make the Roblox viewport (the space where you move your camera) in Studio as big as possible. "
+				.. "It needs to be at least 1024px tall and wide to support the highest settings. "
+				.. "If that doesn't work, your monitor might be too small. In that case, change the resolution plugin-setting to be smaller.",
+			2
+		),
+		spacer1 = spacer(3),
+		uploadHeader = sectionHeader(theme, "Upload failed", 4),
+		uploadBody = bodyText(theme, "Enable the CreateAssetAsync Lua API Beta in Studio settings.", 5),
+	})
+
+	-- Title 32 + tab container 285 (backdrop does not dismiss; only titlebar close)
 	return e(Darkener, {
 		onBackdropClick = function() end,
 		ZIndex = 10001,
@@ -130,62 +219,20 @@ local function HelpShortcutsModal(props: Props)
 				}),
 			}),
 
-			body = e(StudioComponents.ScrollFrame, {
+			tabContainer = e(StudioComponents.TabContainer, {
 				Size = UDim2.new(1, -2, 1, -35),
-				ScrollingDirection = Enum.ScrollingDirection.Y,
-				Layout = {
-					ClassName = "UIListLayout",
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 4),
-				},
-				PaddingLeft = UDim.new(0, 12),
-				PaddingRight = UDim.new(0, 12),
-				PaddingTop = UDim.new(0, 8),
-				PaddingBottom = UDim.new(0, 8),
+				SelectedTab = selectedTab,
+				OnTabSelected = setSelectedTab,
 				LayoutOrder = 2,
 			}, {
-				usageHeader = sectionHeader(theme, "Usage", 1),
-				usageBody = guideText(theme, 2),
-				spacerGuide = e("Frame", {
-					Size = UDim2.new(1, 0, 0, SECTION_GAP),
-					BackgroundTransparency = 1,
-					LayoutOrder = 3,
-				}),
-				kbHeader = sectionHeader(theme, "Keyboard", 4),
-				r1 = shortcutRow("Space", "Play or pause animation", 5),
-				spacer1 = e("Frame", {
-					Size = UDim2.new(1, 0, 0, SECTION_GAP),
-					BackgroundTransparency = 1,
-					LayoutOrder = 6,
-				}),
-				selHeader = sectionHeader(theme, "Selection", 7),
-				r2 = shortcutRow("Ctrl + click", "Add or remove a model in multi-selection", 8),
-				spacer2 = e("Frame", {
-					Size = UDim2.new(1, 0, 0, SECTION_GAP),
-					BackgroundTransparency = 1,
-					LayoutOrder = 9,
-				}),
-				prevHeader = sectionHeader(theme, "Preview (mouse)", 10),
-				r3 = shortcutRow("Shift + drag", "Pan the camera", 11),
-				r4 = shortcutRow("Scroll wheel", "Zoom camera distance", 12),
-				r5 = shortcutRow("Ctrl + scroll", "Adjust field of view", 13),
-				spacerCredits = e("Frame", {
-					Size = UDim2.new(1, 0, 0, SECTION_GAP),
-					BackgroundTransparency = 1,
-					LayoutOrder = 14,
-				}),
-				creditsHeader = sectionHeader(theme, "Credits", 15),
-				creditsBody = e("TextLabel", {
-					Text = "CahwarDev for inspiration",
-					Size = UDim2.new(1, 0, 0, 18),
-					BackgroundTransparency = 1,
-					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = CONTENT_TEXT_SIZE,
-					Font = Enum.Font.SourceSans,
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextYAlignment = Enum.TextYAlignment.Top,
-					LayoutOrder = 16,
-				}),
+				["General"] = {
+					LayoutOrder = 1,
+					Content = generalContent,
+				},
+				["Common Issues"] = {
+					LayoutOrder = 2,
+					Content = issuesContent,
+				},
 			}),
 		}),
 	})

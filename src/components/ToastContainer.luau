@@ -14,6 +14,7 @@ export type ToastEntry = {
 type Props = {
 	toasts: { ToastEntry },
 	onRemove: (id: number) -> (),
+	onHelp: (() -> ())?,
 }
 
 local function ToastContainer(props: Props)
@@ -36,6 +37,7 @@ local function ToastContainer(props: Props)
 			onRemove = function()
 				props.onRemove(toast.id)
 			end,
+			onHelp = if toast.variant == "error" then props.onHelp else nil,
 		})
 	end
 

@@ -31,6 +31,7 @@ type Props = {
 	message: string,
 	LayoutOrder: number,
 	onRemove: () -> (),
+	onHelp: (() -> ())?,
 }
 
 local function Toast(props: Props)
@@ -116,6 +117,9 @@ local function Toast(props: Props)
 			ref = contentRef,
 			Image = "",
 			[React.Event.Activated] = function()
+				if props.variant == "error" and props.onHelp then
+					props.onHelp()
+				end
 				setDismissed(true)
 			end,
 		}, {

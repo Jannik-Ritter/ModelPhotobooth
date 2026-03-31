@@ -69,7 +69,9 @@ local function App(props: Props)
 			return next
 		end)
 	end
-	local helpOpen, setHelpOpen = React.useState(props.plugin:GetSetting("hasSeenHelp") ~= true)
+	local helpOpen, setHelpOpen = React.useState(
+		if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else false
+	)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
 	-- Drives PreviewViewport cursor; ref-based isShiftDown() does not re-render children on key repeat
@@ -695,7 +697,7 @@ local function App(props: Props)
 					onExport = doExport,
 					onUploadAll = doUploadAll,
 					onHelp = function()
-						setHelpOpen(true)
+						setHelpOpen("General")
 					end,
 					renderDisabled = not hasRenderableSelected,
 					renderAllDisabled = totalCount == 0,
@@ -816,6 +818,10 @@ local function App(props: Props)
 						results = uploadResults,
 						onClose = function()
 							setUploadResults(nil)
+						end,
+						onHelp = function()
+							setUploadResults(nil)
+							setHelpOpen("Common Issues")
 						end,
 					})
 					else nil,
@@ -944,6 +950,7 @@ local function App(props: Props)
 					else nil,
 				helpShortcutsModal = if helpOpen
 					then e(HelpShortcutsModal, {
+						initialTab = helpOpen,
 						onClose = function()
 							props.plugin:SetSetting("hasSeenHelp", true)
 							setHelpOpen(false)
@@ -953,6 +960,9 @@ local function App(props: Props)
 				toastContainer = e(ToastContainer, {
 					toasts = toasts,
 					onRemove = removeToast,
+					onHelp = function()
+						setHelpOpen("Common Issues")
+					end,
 				}),
 			}),
 		}),
