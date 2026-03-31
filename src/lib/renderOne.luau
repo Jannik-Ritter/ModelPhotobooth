@@ -5,7 +5,8 @@ local CaptureService = game:GetService("CaptureService")
 local Packages = script.Parent.Parent.Parent.Packages
 local Promise = require(Packages.promise)
 
-local getCF = require(script.Parent.getCF)
+local applyCamera = require(script.Parent.applyCamera)
+local getBoundsSnapshot = require(script.Parent.viewportBounds)
 local getRenderScale = require(script.Parent.getRenderScale)
 local postProcess = require(script.Parent.postProcess)
 local constants = require(script.Parent.Parent.constants)
@@ -36,20 +37,6 @@ local INTERVAL = 0.05
 local SNAP_TIMEOUT = 1 / 60 -- is enough for bg color to propagate
 local POSE_RESOLVE_DT = 1 / 60
 local ANIMATION_LOAD_MAX_ATTEMPTS = 20
-
-local function getBoundsSnapshot(target: Instance): (CFrame, Vector3)
-	local cf = CFrame.new()
-	local size = Vector3.new(4, 4, 4)
-	pcall(function()
-		if target:IsA("Model") then
-			cf, size = target:GetBoundingBox()
-		else
-			cf = (target :: BasePart).CFrame
-			size = (target :: BasePart).Size
-		end
-	end)
-	return cf, size
-end
 
 local function applyAnimationPoseAtTime(animator: Animator, track: AnimationTrack, timePosition: number)
 	track:AdjustSpeed(0)
@@ -97,8 +84,6 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		local tmpCam = Instance.new("Camera")
 		tmpCam.Parent = tmpVP
 		tmpVP.CurrentCamera = tmpCam
-		tmpCam.FieldOfView = math.max(settings.fov, 1)
-
 		local tmpClone
 		local ok = pcall(function()
 			tmpClone = model:Clone()
@@ -109,7 +94,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			reject("failed to clone model")
 			return
 		end
-		local boundsCF, boundsSize = getBoundsSnapshot(tmpClone)
+		local bounds = getBoundsSnapshot(tmpClone)
 
 		-- Pose animation if specified (requires WorldModel + manual StepAnimations)
 		if settings.animationId and settings.animationId ~= "" then
@@ -161,17 +146,16 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			end
 		end
 
-		tmpCam.CFrame = getCF(
-			tmpClone,
-			settings.yaw,
-			settings.pitch,
-			settings.fov,
-			settings.cameraDistance,
-			settings.roll,
-			Vector3.new(settings.cameraOffsetX or 0, settings.cameraOffsetY or 0, settings.cameraOffsetZ or 0),
-			boundsCF,
-			boundsSize
-		)
+		applyCamera(tmpCam, tmpClone, {
+			yaw = settings.yaw,
+			pitch = settings.pitch,
+			roll = settings.roll,
+			fov = settings.fov,
+			cameraDistance = settings.cameraDistance,
+			offsetX = settings.cameraOffsetX or 0,
+			offsetY = settings.cameraOffsetY or 0,
+			offsetZ = settings.cameraOffsetZ or 0,
+		}, bounds)
 		task.wait(INTERVAL)
 
 		local vp = tmpVP.AbsolutePosition

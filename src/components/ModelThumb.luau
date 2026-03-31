@@ -2,7 +2,8 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local getCF = require(script.Parent.Parent.lib.getCF)
+local Store = require(script.Parent.Parent.Store)
+local ModelViewport = require(script.Parent.ModelViewport)
 
 local e = React.createElement
 
@@ -30,6 +31,7 @@ type Props = {
 	offsetX: number,
 	offsetY: number,
 	offsetZ: number,
+	lighting: Store.LightingState,
 	thumbSize: number,
 	isActive: boolean,
 	onSelect: () -> (),
@@ -40,85 +42,7 @@ type Props = {
 -- Thumb tile: themed InputFieldBackground card + Border/MainButton stroke (like PreviewViewport); Studio Label for caption.
 local function ModelThumb(props: Props)
 	local theme = StudioComponents.useTheme()
-	local vpRef = React.useRef(nil :: ViewportFrame?)
-	local camRef = React.useRef(nil :: Camera?)
-	local cloneRef = React.useRef(nil :: Instance?)
 	local hovered, setHovered = React.useState(false)
-
-	-- Clone the model only when the source instance changes.
-	React.useEffect(
-		function()
-			local vp = vpRef.current
-			if not vp then
-				return
-			end
-
-			local cam = Instance.new("Camera")
-			cam.Parent = vp
-			vp.CurrentCamera = cam
-			camRef.current = cam
-
-			local clone
-			local ok = pcall(function()
-				clone = props.entry.instance:Clone()
-				clone.Parent = vp
-			end)
-			if not ok or not clone then
-				cam:Destroy()
-				camRef.current = nil
-				return
-			end
-
-			cloneRef.current = clone
-			return function()
-				if camRef.current == cam then
-					camRef.current = nil
-				end
-				if vp.CurrentCamera == cam then
-					vp.CurrentCamera = nil
-				end
-				if cloneRef.current == clone then
-					cloneRef.current = nil
-				end
-				cam:Destroy()
-				if clone then
-					clone:Destroy()
-				end
-			end
-		end,
-		{ props.entry.instance } :: { any }
-	)
-
-	React.useEffect(
-		function()
-			local cam = camRef.current
-			local clone = cloneRef.current
-			if not cam or not clone then
-				return
-			end
-
-			cam.FieldOfView = math.max(props.fov, 1)
-			cam.CFrame = getCF(
-				clone,
-				props.yaw,
-				props.pitch,
-				props.fov,
-				props.cameraDistance,
-				props.roll,
-				Vector3.new(props.offsetX, props.offsetY, props.offsetZ)
-			)
-		end,
-		{
-			props.yaw,
-			props.pitch,
-			props.fov,
-			props.cameraDistance,
-			props.roll,
-			props.offsetX,
-			props.offsetY,
-			props.offsetZ,
-		} :: { any }
-	)
 
 	-- Show captured image if available
 	local s = props.thumbSize
@@ -135,15 +59,23 @@ local function ModelThumb(props: Props)
 			ScaleType = Enum.ScaleType.Fit,
 		}, {})
 	else
-		content = e("ViewportFrame", {
-			ref = vpRef,
+		content = e(ModelViewport, {
+			instance = props.entry.instance,
+			lighting = props.lighting,
+			camera = {
+				yaw = props.yaw,
+				pitch = props.pitch,
+				roll = props.roll,
+				fov = props.fov,
+				cameraDistance = props.cameraDistance,
+				offsetX = props.offsetX,
+				offsetY = props.offsetY,
+				offsetZ = props.offsetZ,
+			},
 			Size = UDim2.fromOffset(s - 4, contentH),
 			Position = UDim2.fromOffset(2, 2),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 			BorderSizePixel = 0,
-			Ambient = Color3.fromRGB(160, 160, 160),
-			LightDirection = Vector3.new(-1, -2, -1),
-			LightColor = Color3.new(1, 1, 1),
 		}, {})
 	end
 

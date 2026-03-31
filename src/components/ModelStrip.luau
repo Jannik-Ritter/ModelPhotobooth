@@ -20,6 +20,7 @@ type Props = {
 	offsetX: number,
 	offsetY: number,
 	offsetZ: number,
+	lighting: Store.LightingState,
 	onSelectModel: (index: number) -> (),
 	onPreviewModel: (index: number) -> (),
 }
@@ -70,6 +71,7 @@ local function ModelStrip(props: Props)
 		thumbs[thumbKey] = e(ModelThumb, {
 			entry = entry,
 			thumbSize = thumbSize,
+			lighting = props.lighting,
 			yaw = props.yaw,
 			pitch = props.pitch,
 			roll = props.roll,

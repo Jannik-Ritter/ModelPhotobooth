@@ -614,11 +614,8 @@ local function App(props: Props)
 		local ctrlDown = isCtrlDown()
 
 		if ctrlDown then
-			local newFov = math.clamp(
-				state.fov + direction * constants.FOV_SCROLL_STEP,
-				constants.FOV_MIN,
-				constants.FOV_MAX
-			)
+			local newFov =
+				math.clamp(state.fov + direction * constants.FOV_SCROLL_STEP, constants.FOV_MIN, constants.FOV_MAX)
 			dispatch({ type = Store.ACTIONS.SET_FOV, value = newFov })
 		else
 			local newDistance = math.clamp(
@@ -761,6 +758,7 @@ local function App(props: Props)
 							Side1 = e(ModelStrip, {
 								models = state.models,
 								selectedModelIndices = state.selectedModelIndices,
+								lighting = state.lighting,
 								yaw = state.yaw,
 								pitch = state.pitch,
 								roll = state.roll,
@@ -788,6 +786,7 @@ local function App(props: Props)
 										dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
 									else
 										dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
+										dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = nil })
 									end
 								end,
 								onPreviewModel = function(index)

@@ -4,10 +4,11 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local getCF = require(script.Parent.Parent.lib.getCF)
+local applyCamera = require(script.Parent.Parent.lib.applyCamera)
 local useTrackball = require(script.Parent.Parent.hooks.useTrackball)
 local constants = require(script.Parent.Parent.constants)
 local AnimationPanel = require(script.Parent.AnimationPanel)
+local ModelViewport = require(script.Parent.ModelViewport)
 
 local e = React.createElement
 
@@ -95,45 +96,17 @@ type CameraState = {
 	offsetZ: number,
 }
 
-type BoundsSnapshot = {
-	cf: CFrame,
-	size: Vector3,
-}
-
-local function toOffsetVector(state: CameraState): Vector3
-	return Vector3.new(state.offsetX, state.offsetY, state.offsetZ)
-end
-
-local function getBoundsSnapshot(target: Instance): BoundsSnapshot
-	local cf = CFrame.new()
-	local size = Vector3.new(4, 4, 4)
-	pcall(function()
-		if target:IsA("Model") then
-			cf, size = target:GetBoundingBox()
-		else
-			cf = (target :: BasePart).CFrame
-			size = (target :: BasePart).Size
-		end
-	end)
+local function toCameraStateParams(state: CameraState): applyCamera.CameraParams
 	return {
-		cf = cf,
-		size = size,
+		yaw = state.yaw,
+		pitch = state.pitch,
+		roll = state.roll,
+		fov = state.fov,
+		cameraDistance = state.distance,
+		offsetX = state.offsetX,
+		offsetY = state.offsetY,
+		offsetZ = state.offsetZ,
 	}
-end
-
-local function applyCamera(camera: Camera, target: Instance, state: CameraState, bounds: BoundsSnapshot?)
-	camera.FieldOfView = math.max(state.fov, 1)
-	camera.CFrame = getCF(
-		target,
-		state.yaw,
-		state.pitch,
-		state.fov,
-		state.distance,
-		state.roll,
-		toOffsetVector(state),
-		if bounds then bounds.cf else nil,
-		if bounds then bounds.size else nil
-	)
 end
 
 local function stopAndDestroyTrack(trackRef: { current: AnimationTrack? })
@@ -190,10 +163,11 @@ local function PreviewViewport(props: Props)
 	local pointerInViewport, setPointerInViewport = React.useState(false)
 	local pointerInViewportRef = React.useRef(false)
 
+	-- Shared refs for ModelViewport and animation logic
 	local vpRef = React.useRef(nil :: ViewportFrame?)
 	local camRef = React.useRef(nil :: Camera?)
 	local cloneRef = React.useRef(nil :: Instance?)
-	local boundsRef = React.useRef(nil :: BoundsSnapshot?)
+	local boundsRef = React.useRef(nil :: { cf: CFrame, size: Vector3 }?)
 	local trackRef = React.useRef(nil :: AnimationTrack?)
 	local animatorRef = React.useRef(nil :: Animator?)
 
@@ -237,48 +211,7 @@ local function PreviewViewport(props: Props)
 		return function()
 			conn:Disconnect()
 		end
-	end, {})
-
-	-- Clone model into viewport (using WorldModel for animation support)
-	React.useEffect(function()
-		local vp = vpRef.current
-		if not vp or not activeInstance then
-			return
-		end
-
-		local camera = Instance.new("Camera")
-		camera.Parent = vp
-		vp.CurrentCamera = camera
-
-		local worldModel = Instance.new("WorldModel")
-		worldModel.Parent = vp
-
-		local clone
-		local ok = pcall(function()
-			clone = activeInstance:Clone()
-			clone.Parent = worldModel
-		end)
-		if not ok or not clone then
-			camera:Destroy()
-			worldModel:Destroy()
-			return
-		end
-
-		camRef.current = camera
-		cloneRef.current = clone
-		boundsRef.current = getBoundsSnapshot(clone)
-		applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
-
-		return function()
-			stopAndDestroyTrack(trackRef)
-			animatorRef.current = nil
-			camera:Destroy()
-			worldModel:Destroy()
-			camRef.current = nil
-			cloneRef.current = nil
-			boundsRef.current = nil
-		end
-	end, { activeInstance, props.activeAnimationIndex })
+	end, { activeInstance })
 
 	-- Load animation track when active animation changes
 	React.useEffect(function()
@@ -323,14 +256,7 @@ local function PreviewViewport(props: Props)
 		track:Play(0)
 		trackRef.current = track
 
-		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
-
-		-- Re-apply camera after pose changes so the preview updates immediately. Camera fit uses
-		-- cached pre-animation bounds for stability across preview and export.
-		if camRef.current and cloneRef.current then
-			applyCamera(camRef.current, cloneRef.current, cameraStateRef.current, boundsRef.current)
-		end
-
+		-- Wait for animation to load before applying pose (StepAnimations needs loaded data)
 		task.spawn(function()
 			local attempts = 0
 			while track.Length == 0 and attempts < 100 do
@@ -339,6 +265,12 @@ local function PreviewViewport(props: Props)
 			end
 			if trackRef.current == track and track.Length > 0 then
 				props.onSetLength(track.Length)
+				-- Apply pose now that animation is loaded
+				applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+				-- Re-apply camera after pose changes so the preview updates immediately
+				if camRef.current and cloneRef.current then
+					applyCamera(camRef.current, cloneRef.current, toCameraStateParams(cameraStateRef.current), boundsRef.current)
+				end
 			end
 		end)
 
@@ -364,9 +296,26 @@ local function PreviewViewport(props: Props)
 		local camera = camRef.current
 		local clone = cloneRef.current
 		if camera and clone then
-			applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
+			applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
 		end
 	end, { props.animationTimePosition, props.animationPlaying, props.activeAnimationIndex })
+
+	-- Apply pose when track becomes available (handles "just loaded" case when paused)
+	React.useEffect(function()
+		local track = trackRef.current
+		local animator = animatorRef.current
+		if not track or not animator or props.animationPlaying then
+			return
+		end
+
+		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+
+		local camera = camRef.current
+		local clone = cloneRef.current
+		if camera and clone then
+			applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
+		end
+	end, { props.activeAnimationIndex })
 
 	-- Manual playback via StepAnimations during Heartbeat
 	React.useEffect(function()
@@ -387,7 +336,7 @@ local function PreviewViewport(props: Props)
 			local camera = camRef.current
 			local clone = cloneRef.current
 			if camera and clone then
-				applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
+				applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
 			end
 			props.onSetTimePosition(track.TimePosition)
 		end)
@@ -396,27 +345,6 @@ local function PreviewViewport(props: Props)
 			conn:Disconnect()
 		end
 	end, { props.animationPlaying, props.activeAnimationIndex, activeInstance })
-
-	-- Update camera when camera inputs change externally
-	React.useEffect(
-		function()
-			local camera = camRef.current
-			local clone = cloneRef.current
-			if camera and clone then
-				applyCamera(camera, clone, cameraStateRef.current, boundsRef.current)
-			end
-		end,
-		{
-			props.yaw,
-			props.pitch,
-			props.roll,
-			props.fov,
-			props.cameraDistance,
-			props.offsetX,
-			props.offsetY,
-			props.offsetZ,
-		} :: { any }
-	)
 
 	-- Trackball / translate
 	local trackball = useTrackball(function(dx: number, dy: number)
@@ -442,7 +370,7 @@ local function PreviewViewport(props: Props)
 			state.offsetX = math.clamp(state.offsetX, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
 			state.offsetY = math.clamp(state.offsetY, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
 			state.offsetZ = math.clamp(state.offsetZ, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
-			applyCamera(camera, clone, state, boundsRef.current)
+			applyCamera(camera, clone, toCameraStateParams(state), boundsRef.current)
 			props.onTranslate(delta.X, delta.Y, delta.Z)
 			return
 		end
@@ -451,14 +379,14 @@ local function PreviewViewport(props: Props)
 		local pitchDelta = dy * ROTATION_SENSITIVITY
 		state.yaw += yawDelta
 		state.pitch += pitchDelta
-		applyCamera(camera, clone, state, boundsRef.current)
+		applyCamera(camera, clone, toCameraStateParams(state), boundsRef.current)
 		props.onTrackball(yawDelta, pitchDelta)
 	end)
 
 	local isDragging = trackball.isDragging
 
 	-- plugin:GetMouse().Icon is global. Ref syncs on leave before React state so a late Heartbeat/effect
-	-- cannot setIcon after clearIcon. shiftDown is real state from App so cursor updates when Shift toggles.
+	-- cannot setIcon after React state so cursor updates when Shift toggles.
 	local applyViewportCursor = React.useCallback(function()
 		if not pointerInViewportRef.current then
 			mouseIcon.clearIcon()
@@ -639,38 +567,54 @@ local function PreviewViewport(props: Props)
 			setPointerInViewport(false)
 		end,
 	}, {
-		viewport = e("ViewportFrame", {
-			ref = vpRef,
-			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
-			BorderSizePixel = 0,
-			Ambient = props.lighting.ambient,
-			LightDirection = Vector3.new(props.lighting.lightDirectionX, props.lighting.lightDirectionY, props.lighting.lightDirectionZ),
-			LightColor = props.lighting.lightColor,
-		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
-			aspectOverlay = aspectOverlay,
-			_TrackballInput = e("ImageButton", {
+		viewport = if activeInstance
+			then e(ModelViewport, {
+				instance = activeInstance,
+				lighting = props.lighting,
+				camera = {
+					yaw = props.yaw,
+					pitch = props.pitch,
+					roll = props.roll,
+					fov = props.fov,
+					cameraDistance = props.cameraDistance,
+					offsetX = props.offsetX,
+					offsetY = props.offsetY,
+					offsetZ = props.offsetZ,
+				},
+				refs = {
+					viewportFrame = vpRef,
+					camera = camRef,
+					clone = cloneRef,
+					bounds = boundsRef,
+				},
 				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				ImageTransparency = 1,
-				AutoButtonColor = false,
-				ZIndex = 1,
-				[React.Event.InputBegan] = trackball.onInputBegan,
-				[React.Event.InputChanged] = function(rbx, input)
-					if input.UserInputType == Enum.UserInputType.MouseWheel then
-						local direction = math.sign(input.Position.Z)
-						props.onScroll(direction)
-					else
-						trackball.onInputChanged(rbx, input)
-					end
-				end,
-				[React.Event.InputEnded] = trackball.onInputEnded,
-				[React.Event.MouseLeave] = trackball.onMouseLeave,
-			}),
-			empty = emptyLabel,
-			animationPanel = animPanel,
-		}),
+				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
+				BorderSizePixel = 0,
+			}, {
+				corner = e("UICorner", { CornerRadius = UDim.new(0, 6) }),
+				aspectOverlay = aspectOverlay,
+				_TrackballInput = e("ImageButton", {
+					Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1,
+					ImageTransparency = 1,
+					AutoButtonColor = false,
+					ZIndex = 1,
+					[React.Event.InputBegan] = trackball.onInputBegan,
+					[React.Event.InputChanged] = function(rbx, input)
+						if input.UserInputType == Enum.UserInputType.MouseWheel then
+							local direction = math.sign(input.Position.Z)
+							props.onScroll(direction)
+						else
+							trackball.onInputChanged(rbx, input)
+						end
+					end,
+					[React.Event.InputEnded] = trackball.onInputEnded,
+					[React.Event.MouseLeave] = trackball.onMouseLeave,
+				}),
+				empty = emptyLabel,
+				animationPanel = animPanel,
+			})
+			else nil,
 	})
 end
 
