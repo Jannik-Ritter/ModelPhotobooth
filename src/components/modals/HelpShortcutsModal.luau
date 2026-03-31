@@ -166,12 +166,13 @@ local function HelpShortcutsModal(props: Props)
 				.. "It needs to be at least "
 				.. tostring(constants.HELP_MIN_VIEWPORT_PX)
 				.. "px tall and wide to support the highest settings. "
-				.. "If that doesn't work, your monitor might be too small. In that case, change the resolution plugin-setting to be smaller.",
+				.. "If that doesn't work, your monitor might be too small. In that case, change the resolution plugin-setting to be smaller."
+				.. "Or alternatively, enable device emulation in Studio settings.",
 			2
 		),
 		spacer1 = spacer(3),
 		uploadHeader = sectionHeader(theme, "Upload failed", 4),
-		uploadBody = bodyText(theme, "Enable the CreateAssetAsync Lua API Beta in Studio settings.", 5),
+		uploadBody = bodyText(theme, "Enable the CreateAssetAsync Lua API Beta in Studio settings and restart.", 5),
 		spacerContact = spacer(6),
 		contactBody = e("TextLabel", {
 			Text = "Didn't find your issue? Message me @Chahier",
