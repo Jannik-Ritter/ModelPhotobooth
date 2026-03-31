@@ -486,6 +486,9 @@ local function App(props: Props)
 				roll = state.roll,
 				fov = state.fov,
 				cameraDistance = state.cameraDistance,
+				cameraOffsetX = state.cameraOffsetX,
+				cameraOffsetY = state.cameraOffsetY,
+				cameraOffsetZ = state.cameraOffsetZ,
 				bgMode = state.bgMode,
 				bgColor = state.bgColor,
 				exportSize = state.exportSize,
@@ -494,6 +497,7 @@ local function App(props: Props)
 				innerShadow = state.innerShadow,
 				outerGlow = state.outerGlow,
 				chromaticAberration = state.chromaticAberration,
+				lighting = state.lighting,
 			})
 		elseif modal.mode == "rename" and modal.targetIndex then
 			local entry = table.clone(next[modal.targetIndex])

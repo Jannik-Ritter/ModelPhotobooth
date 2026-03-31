@@ -77,12 +77,13 @@ local DEFAULT_LIGHTING = {
 }
 
 local function serializeLighting(l)
+	local base = if l then l else DEFAULT_LIGHTING
 	return {
-		lightColor = serializeColor(l.lightColor),
-		ambient = serializeColor(l.ambient),
-		lightDirectionX = l.lightDirectionX,
-		lightDirectionY = l.lightDirectionY,
-		lightDirectionZ = l.lightDirectionZ,
+		lightColor = serializeColor(base.lightColor),
+		ambient = serializeColor(base.ambient),
+		lightDirectionX = base.lightDirectionX,
+		lightDirectionY = base.lightDirectionY,
+		lightDirectionZ = base.lightDirectionZ,
 	}
 end
 
