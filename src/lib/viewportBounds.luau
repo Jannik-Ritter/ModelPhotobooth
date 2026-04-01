@@ -1,10 +1,11 @@
 local Types = require(script.Parent.Parent.Types)
+local Constants = require(script.Parent.Parent.Constants)
 
 export type BoundsSnapshot = Types.BoundsSnapshot
 
 local function getBoundsSnapshot(target: Instance): Types.BoundsSnapshot
 	local cf = CFrame.new()
-	local size = Vector3.new(4, 4, 4)
+	local size = Constants.DEFAULT_BOUNDS_SIZE
 	local ok, err = pcall(function()
 		if target:IsA("Model") then
 			cf, size = target:GetBoundingBox()

@@ -90,7 +90,7 @@ local function Toast(props: Props)
 			local collapseTween = TweenService:Create(
 				slot,
 				TweenInfo.new(0.14, Enum.EasingStyle.Quart, Enum.EasingDirection.In),
-				{ Size = UDim2.new(1, 0, 0, 0) }
+				{ Size = UDim2.fromScale(1, 0) }
 			)
 			collapseTween:Play()
 			collapseTween.Completed:Connect(function()

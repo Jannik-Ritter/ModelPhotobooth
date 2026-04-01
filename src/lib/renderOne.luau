@@ -17,11 +17,6 @@ local Constants = require(script.Parent.Parent.Constants)
 type RenderSettings = Types.RenderSettings
 type CaptureViewport = Types.CaptureViewport
 
-local INTERVAL = 0.05 -- seconds between screenshot poll attempts
-local SNAP_TIMEOUT = 1 / 60 -- max wait for a single CaptureScreenshot callback
-local POSE_STEP_COUNT = 3 -- extra StepAnimations calls to settle physics/blend
-local ANIMATION_LOAD_MAX_ATTEMPTS = 100 -- polling attempts before giving up on animation load
-
 local applyAnimationPoseAtTime = animationHelpers.applyAnimationPoseAtTime
 local getOrCreateAnimator = animationHelpers.getOrCreateAnimator
 
@@ -56,15 +51,15 @@ local function setupAnimation(modelClone: Instance, viewport: ViewportFrame, set
 	track.Looped = true
 	track:Play(0)
 
-	local okLength = waitForAnimationTrackLength(track, ANIMATION_LOAD_MAX_ATTEMPTS):await()
+	local okLength = waitForAnimationTrackLength(track, Constants.MAX_POLL_ATTEMPTS):await()
 	if not okLength then
 		return
 	end
 
-	for _ = 1, POSE_STEP_COUNT do
+	for _ = 1, Constants.POSE_STEP_COUNT do
 		applyAnimationPoseAtTime(animator, track, settings.animationTimePosition or 0)
 	end
-	task.wait(INTERVAL)
+	task.wait(Constants.POLL_INTERVAL)
 end
 
 local function createCaptureViewport(
@@ -75,7 +70,7 @@ local function createCaptureViewport(
 	local tmpGui = Instance.new("ScreenGui")
 	tmpGui.Name = "_MPhotoCapture"
 	tmpGui.ResetOnSpawn = false
-	tmpGui.DisplayOrder = 9999
+	tmpGui.DisplayOrder = Constants.ZINDEX_OVERLAY
 	tmpGui.IgnoreGuiInset = true
 	tmpGui.Parent = CoreGui
 
@@ -123,9 +118,9 @@ end
 local function snapBackground(bgFrame: Frame, viewport: ViewportFrame, bg: Color3): (boolean, EditableImage?, string?)
 	bgFrame.BackgroundColor3 = bg
 	viewport.BackgroundColor3 = bg
-	task.wait(SNAP_TIMEOUT)
+	task.wait(Constants.FRAME_DT)
 
-	local ok, result = snapScreenshot(1, 0.05):await()
+	local ok, result = snapScreenshot(1, Constants.POLL_INTERVAL):await()
 	if not ok then
 		return false, nil, tostring(result)
 	end
@@ -169,7 +164,7 @@ local function extractAlpha(
 		local outA = 255 - math.floor(((wr - br) + (wg - bg_) + (wb - bb)) / 3 + 0.5)
 		local outR, outG, outB
 
-		if outA > 2 then
+		if outA > Constants.MIN_VISIBLE_ALPHA then
 			local a = outA / 255
 			outR = math.floor(math.clamp(br / a, 0, 255) + 0.5)
 			outG = math.floor(math.clamp(bg_ / a, 0, 255) + 0.5)
@@ -258,7 +253,7 @@ local function renderOne(model: Instance, settings: RenderSettings)
 			offsetZ = settings.cameraOffsetZ or 0,
 		}, bounds)
 
-		task.wait(INTERVAL)
+		task.wait(Constants.POLL_INTERVAL)
 
 		local absPos = vp.viewport.AbsolutePosition
 		local cropPos =

@@ -2,12 +2,7 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local Store = require(script.Parent.Parent.Store)
 
-return function(
-	dispatch: (any) -> (),
-	activeInstance: Instance?,
-	animationPlayingRef: { current: boolean },
-	activeAnimationIndexRef: { current: number? }
-)
+return function(dispatch: (any) -> (), activeInstance: Instance?)
 	React.useEffect(function()
 		if not activeInstance then
 			dispatch({ type = Store.ACTIONS.SET_ANIMATIONS, value = {} })
@@ -24,5 +19,4 @@ return function(
 		end
 		dispatch({ type = Store.ACTIONS.SET_ANIMATIONS, value = anims })
 	end, { activeInstance } :: { any })
-
 end

@@ -1,5 +1,6 @@
 local postProcess = {}
 local Types = require(script.Parent.Parent.Types)
+local Constants = require(script.Parent.Parent.Constants)
 
 function postProcess.applyOutline(buf: buffer, w: number, h: number, color: Color3, thickness: number): buffer
 	local cr = math.floor(color.R * 255 + 0.5)
@@ -11,7 +12,7 @@ function postProcess.applyOutline(buf: buffer, w: number, h: number, color: Colo
 		for y = 0, h - 1 do
 			for x = 0, w - 1 do
 				local o = (y * w + x) * 4
-				if buffer.readu8(buf, o + 3) < 128 then
+				if buffer.readu8(buf, o + 3) < Constants.ALPHA_THRESHOLD then
 					local hit = false
 					for dy = -1, 1 do
 						for dx = -1, 1 do
@@ -22,7 +23,7 @@ function postProcess.applyOutline(buf: buffer, w: number, h: number, color: Colo
 									and nx < w
 									and ny >= 0
 									and ny < h
-									and buffer.readu8(buf, (ny * w + nx) * 4 + 3) >= 128
+									and buffer.readu8(buf, (ny * w + nx) * 4 + 3) >= Constants.ALPHA_THRESHOLD
 								then
 									hit = true
 								end
@@ -126,7 +127,7 @@ function postProcess.applyDropShadow(
 	local cg = color.G
 	local cb = color.B
 	local opF = opacity / 100
-	local rad = math.rad(angle or 45)
+	local rad = math.rad(angle or Constants.DEFAULT_DROP_SHADOW_ANGLE)
 	local offX = math.round(dist * math.cos(rad))
 	local offY = math.round(dist * math.sin(rad))
 	local sAlpha = buffer.create(w * h)
@@ -158,7 +159,7 @@ function postProcess.applyInnerShadow(
 	local cg = color.G
 	local cb = color.B
 	local opF = opacity / 100
-	local rad = math.rad(angle or 225)
+	local rad = math.rad(angle or Constants.DEFAULT_INNER_SHADOW_ANGLE)
 	local offX = math.round(dist * math.cos(rad))
 	local offY = math.round(dist * math.sin(rad))
 	local shifted = buffer.create(w * h)

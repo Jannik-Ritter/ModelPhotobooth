@@ -4,6 +4,7 @@ local StudioComponents = require(Packages.studiocomponents)
 local Types = require(script.Parent.Parent.Types)
 
 local limitDecimals = require(script.Parent.Parent.utils.limitDecimals)
+local Constants = require(script.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -63,7 +64,7 @@ local function AnimationPanel(props: Props)
 	animChildren.layout = e("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
+		Padding = Constants.LIST_PADDING_SMALL,
 		VerticalAlignment = Enum.VerticalAlignment.Center,
 	})
 
@@ -89,7 +90,7 @@ local function AnimationPanel(props: Props)
 	local transport = nil
 	if hasActive then
 		transport = e("Frame", {
-			Size = UDim2.new(1, 0, 0, 22),
+			Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 			Position = UDim2.fromOffset(0, 30),
 			BackgroundTransparency = 1,
 			ZIndex = 21,
@@ -97,16 +98,16 @@ local function AnimationPanel(props: Props)
 			layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 6),
+				Padding = Constants.LIST_PADDING,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
 			playBtn = e(if props.playing then StudioComponents.MainButton else StudioComponents.Button, {
 				Icon = {
 					Image = if props.playing then "rbxassetid://120342180359733" else "rbxassetid://136943897636322",
-					Size = Vector2.new(16, 16),
+					Size = Constants.TOOLBAR_ICON_GLYPH,
 					UseThemeColor = true,
 				},
-				Size = UDim2.fromOffset(28, 22),
+				Size = UDim2.fromOffset(28, Constants.ROW_HEIGHT),
 				LayoutOrder = 1,
 				ZIndex = 22,
 				OnActivated = function()
@@ -121,7 +122,7 @@ local function AnimationPanel(props: Props)
 				Disabled = sliderDisabled,
 				OnChanged = onSliderChanged,
 				OnCompleted = onSliderCompleted,
-				Size = UDim2.new(1, -90, 0, 22),
+				Size = UDim2.new(1, -90, 0, Constants.ROW_HEIGHT),
 				LayoutOrder = 2,
 				ZIndex = 22,
 			}),

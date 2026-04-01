@@ -3,6 +3,8 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 local EffectRowBase = require(script.Parent.EffectRowBase)
 
+local Constants = require(script.Parent.Parent.Parent.Constants)
+
 local e = React.createElement
 
 type Props = {
@@ -29,14 +31,14 @@ local function OutlineEffectRow(props: Props)
 		-- Thickness: NumericInput already shows the value — no extra value label
 		-- Layout: [Label 56px] [gap 6px] [NumericInput flex]
 		thickness = e("Frame", {
-			Size = UDim2.new(1, 0, 0, 22),
+			Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 			BackgroundTransparency = 1,
 			LayoutOrder = 2,
 		}, {
 			layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 6),
+				Padding = Constants.LIST_PADDING,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
 			label = e(StudioComponents.Label, {
@@ -46,6 +48,7 @@ local function OutlineEffectRow(props: Props)
 			}),
 			input = e(StudioComponents.NumericInput, {
 				Value = props.thickness,
+				ClearTextOnFocus = false,
 				OnValidChanged = props.onThicknessChanged,
 				Min = 1,
 				Max = 15,

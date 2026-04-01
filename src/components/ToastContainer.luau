@@ -2,6 +2,7 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local Types = require(script.Parent.Parent.Types)
 
+local Constants = require(script.Parent.Parent.Constants)
 local Toast = require(script.Parent.Toast)
 
 local e = React.createElement
@@ -20,7 +21,7 @@ local function ToastContainer(props: Props)
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			VerticalAlignment = Enum.VerticalAlignment.Top,
-			Padding = UDim.new(0, 6),
+			Padding = Constants.LIST_PADDING,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 	}

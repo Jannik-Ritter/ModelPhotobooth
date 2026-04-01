@@ -51,10 +51,10 @@ local function ConfirmModal(props: Props)
 				label = e("TextLabel", {
 					Text = props.message,
 					Size = UDim2.new(1, -16, 1, 0),
-					Position = UDim2.fromOffset(8, 0),
+					Position = UDim2.fromOffset(Constants.PADDING_8, 0),
 					BackgroundTransparency = 1,
 					TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-					TextSize = 16,
+					TextSize = Constants.TEXT_SIZE_BODY,
 					Font = Enum.Font.SourceSans,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextWrapped = true,
@@ -62,24 +62,24 @@ local function ConfirmModal(props: Props)
 			}),
 
 			footer = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 40),
+				Size = UDim2.new(1, 0, 0, Constants.MODAL_FOOTER_HEIGHT),
 				BackgroundTransparency = 1,
 				LayoutOrder = 3,
 			}, {
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					HorizontalAlignment = Enum.HorizontalAlignment.Right,
 				}),
 				padding = e("UIPadding", {
-					PaddingRight = UDim.new(0, 8),
+					PaddingRight = UDim.new(0, Constants.PADDING_8),
 				}),
 				cancel = e(StudioComponents.Button, {
 					Text = "Cancel",
 					OnActivated = props.onClose,
-					Size = UDim2.fromOffset(60, 24),
+					Size = UDim2.fromOffset(60, Constants.BUTTON_HEIGHT),
 					LayoutOrder = 1,
 				}),
 				confirm = e(StudioComponents.MainButton, {
@@ -88,7 +88,7 @@ local function ConfirmModal(props: Props)
 						props.onConfirm()
 						props.onClose()
 					end,
-					Size = UDim2.fromOffset(60, 24),
+					Size = UDim2.fromOffset(60, Constants.BUTTON_HEIGHT),
 					LayoutOrder = 2,
 				}),
 			}),

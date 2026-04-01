@@ -3,6 +3,8 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 local SliderRow = require(script.Parent.SliderRow)
 
+local Constants = require(script.Parent.Parent.Parent.Constants)
+
 local e = React.createElement
 
 type Props = {
@@ -23,18 +25,18 @@ local function ChromaticAberrationEffectRow(props: Props)
 	children["listLayout"] = e("UIListLayout", {
 		FillDirection = Enum.FillDirection.Vertical,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
+		Padding = Constants.LIST_PADDING_SMALL,
 	})
 
 	children["header"] = e("Frame", {
-		Size = UDim2.new(1, 0, 0, 26),
+		Size = UDim2.new(1, 0, 0, Constants.HEADER_HEIGHT),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 	}, {
 		layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 6),
+			Padding = Constants.LIST_PADDING,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
 		toggle = e(StudioComponents.Checkbox, {

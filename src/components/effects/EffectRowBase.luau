@@ -26,7 +26,7 @@ local function EffectRowBase(props: Props)
 	local swatchGap = 6
 	local swatchReserve = Constants.TOOLBAR_ICON_GLYPH.X + swatchGap
 	children["header"] = e("Frame", {
-		Size = UDim2.new(1, 0, 0, 26),
+		Size = UDim2.new(1, 0, 0, Constants.HEADER_HEIGHT),
 		BackgroundTransparency = 1,
 		LayoutOrder = 1,
 	}, {
@@ -37,7 +37,7 @@ local function EffectRowBase(props: Props)
 			layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 6),
+				Padding = Constants.LIST_PADDING,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
 			toggle = e(StudioComponents.Checkbox, {
@@ -63,10 +63,10 @@ local function EffectRowBase(props: Props)
 			AutoButtonColor = false,
 			[React.Event.MouseButton1Click] = props.onColorPickerToggle,
 		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+			corner = e("UICorner", { CornerRadius = UDim.new(0, Constants.CORNER_RADIUS_3) }),
 			stroke = e("UIStroke", {
 				Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-				Thickness = 1,
+				Thickness = Constants.STROKE_THIN,
 			}),
 		}),
 	})
@@ -81,11 +81,11 @@ local function EffectRowBase(props: Props)
 	children["listLayout"] = e("UIListLayout", {
 		FillDirection = Enum.FillDirection.Vertical,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
+		Padding = Constants.LIST_PADDING_SMALL,
 	})
 
 	return e("Frame", {
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		LayoutOrder = props.LayoutOrder,

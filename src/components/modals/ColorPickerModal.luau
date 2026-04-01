@@ -44,19 +44,19 @@ local function ColorPickerModal(props: Props)
 				props.onColorChanged(c)
 			end,
 		}, {
-			corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+			corner = e("UICorner", { CornerRadius = UDim.new(0, Constants.CORNER_RADIUS_3) }),
 			stroke = e("UIStroke", {
 				Color = if props.color == c
 					then theme:GetColor(Enum.StudioStyleGuideColor.MainText)
 					else theme:GetColor(Enum.StudioStyleGuideColor.Border),
-				Thickness = if props.color == c then 2 else 1,
+				Thickness = if props.color == c then Constants.STROKE_ACTIVE else Constants.STROKE_THIN,
 			}),
 		})
 	end
 	swatches["layout"] = e("UIListLayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
+		Padding = Constants.LIST_PADDING_SMALL,
 		VerticalAlignment = Enum.VerticalAlignment.Center,
 	})
 
@@ -114,7 +114,7 @@ local function ColorPickerModal(props: Props)
 			}),
 
 			footer = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 40),
+				Size = UDim2.new(1, 0, 0, Constants.MODAL_FOOTER_HEIGHT),
 				BackgroundTransparency = 1,
 				LayoutOrder = 4,
 			}, {
@@ -124,8 +124,8 @@ local function ColorPickerModal(props: Props)
 						props.onColorChanged(intermediateColor)
 						props.onClose()
 					end,
-					Size = UDim2.new(1, -16, 0, 24),
-					Position = UDim2.fromOffset(8, 8),
+					Size = UDim2.new(1, -16, 0, Constants.BUTTON_HEIGHT),
+					Position = UDim2.fromOffset(Constants.PADDING_8, Constants.PADDING_8),
 				}),
 			}),
 		}),

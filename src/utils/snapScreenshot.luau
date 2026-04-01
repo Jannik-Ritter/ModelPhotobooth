@@ -3,17 +3,15 @@ local CaptureService = game:GetService("CaptureService")
 
 local Packages = script.Parent.Parent.Parent.Packages
 local Promise = require(Packages.promise)
+local Constants = require(script.Parent.Parent.Constants)
 
-local DEFAULT_TIMEOUT = 6
-local DEFAULT_INTERVAL = 0.05
-
-type Promise<T> = typeof(Promise.new)
+export type Promise<T> = typeof(Promise.new)
 
 -- Captures a screenshot via CaptureService and converts it to an EditableImage
 -- Resolves with the EditableImage, or rejects after 'timeout' seconds
 return function(timeout: number?, interval: number?): Promise<EditableImage>
-	local timeLimit = timeout or DEFAULT_TIMEOUT
-	local step = interval or DEFAULT_INTERVAL
+	local timeLimit = timeout or Constants.SCREENSHOT_TIMEOUT
+	local step = interval or Constants.POLL_INTERVAL
 
 	return Promise.new(function(resolve, reject)
 		local done = false

@@ -123,9 +123,9 @@ return function(state: Store.AppState, dispatch: (any) -> (), activeInstance: In
 				track:Stop(0)
 				track:Destroy()
 				trackRef.current = nil
-				local anim = animatorRef.current
-				if anim then
-					anim:StepAnimations(0)
+			local currentAnimator = animatorRef.current
+			if currentAnimator then
+				currentAnimator:StepAnimations(0)
 				end
 			end
 		end

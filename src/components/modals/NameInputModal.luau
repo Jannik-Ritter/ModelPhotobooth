@@ -57,6 +57,7 @@ local function NameInputModal(props: Props)
 				input = e(StudioComponents.TextInput, {
 					Text = text,
 					PlaceholderText = "Preset name",
+					ClearTextOnFocus = false,
 					OnChanged = function(newText)
 						setText(newText)
 					end,
@@ -72,24 +73,24 @@ local function NameInputModal(props: Props)
 			}),
 
 			footer = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 40),
+				Size = UDim2.new(1, 0, 0, Constants.MODAL_FOOTER_HEIGHT),
 				BackgroundTransparency = 1,
 				LayoutOrder = 3,
 			}, {
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					HorizontalAlignment = Enum.HorizontalAlignment.Right,
 				}),
 				padding = e("UIPadding", {
-					PaddingRight = UDim.new(0, 8),
+					PaddingRight = UDim.new(0, Constants.PADDING_8),
 				}),
 				cancel = e(StudioComponents.Button, {
 					Text = "Cancel",
 					OnActivated = props.onClose,
-					Size = UDim2.fromOffset(60, 24),
+					Size = UDim2.fromOffset(60, Constants.BUTTON_HEIGHT),
 					LayoutOrder = 1,
 				}),
 				confirm = e(StudioComponents.MainButton, {
@@ -99,7 +100,7 @@ local function NameInputModal(props: Props)
 						props.onClose()
 					end,
 					Disabled = #text == 0,
-					Size = UDim2.fromOffset(60, 24),
+					Size = UDim2.fromOffset(60, Constants.BUTTON_HEIGHT),
 					LayoutOrder = 2,
 				}),
 			}),

@@ -100,19 +100,19 @@ local function ImagePreviewModal(props: Props)
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					HorizontalAlignment = Enum.HorizontalAlignment.Right,
 				}),
 				padding = e("UIPadding", {
-					PaddingRight = UDim.new(0, 8),
+					PaddingRight = UDim.new(0, Constants.PADDING_8),
 				}),
 				rerender = if not props.hideRerender
 					then e(StudioComponents.Button, {
 						Text = "Re-render",
 						OnActivated = props.onRerender,
 						Disabled = props.rendering,
-						Size = UDim2.fromOffset(80, 24),
+						Size = UDim2.fromOffset(80, Constants.BUTTON_HEIGHT),
 						LayoutOrder = 1,
 					})
 					else nil,
@@ -120,14 +120,14 @@ local function ImagePreviewModal(props: Props)
 					Text = "Upload",
 					OnActivated = props.onUpload,
 					Disabled = props.rendering or props.uploading,
-					Size = UDim2.fromOffset(64, 24),
+					Size = UDim2.fromOffset(64, Constants.BUTTON_HEIGHT),
 					LayoutOrder = 2,
 				}),
 				exportThis = e(StudioComponents.MainButton, {
 					Text = "Export This",
 					OnActivated = props.onExport,
 					Disabled = props.rendering,
-					Size = UDim2.fromOffset(84, 24),
+					Size = UDim2.fromOffset(84, Constants.BUTTON_HEIGHT),
 					LayoutOrder = 3,
 				}),
 			}),

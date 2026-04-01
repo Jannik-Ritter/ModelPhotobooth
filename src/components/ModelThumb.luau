@@ -4,6 +4,7 @@ local StudioComponents = require(Packages.studiocomponents)
 
 local StoreContext = require(script.Parent.Parent.StoreContext)
 local ModelViewport = require(script.Parent.ModelViewport)
+local Constants = require(script.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -13,8 +14,6 @@ local STATUS_COLORS = {
 	ok = Color3.fromRGB(50, 210, 80),
 	fail = Color3.fromRGB(220, 60, 60),
 }
-
-local NAME_ROW_HEIGHT = 16
 
 type Props = {
 	entry: {
@@ -39,7 +38,7 @@ local function ModelThumb(props: Props)
 
 	-- Always show live ViewportFrame; rendered images go to the Renders tab
 	local s = props.thumbSize
-	local contentH = s - NAME_ROW_HEIGHT - 4
+	local contentH = s - Constants.THUMB_NAME_ROW_HEIGHT - 4
 	local content = e(ModelViewport, {
 		instance = props.entry.instance,
 		lighting = state.lighting,
@@ -99,14 +98,14 @@ local function ModelThumb(props: Props)
 	}, {
 		stroke = e("UIStroke", {
 			Color = if props.isActive then accentColor else theme:GetColor(Enum.StudioStyleGuideColor.Border),
-			Thickness = if props.isActive then 2 else 1,
+			Thickness = if props.isActive then Constants.STROKE_ACTIVE else Constants.STROKE_THIN,
 		}),
 		content = content,
 		previewIcon = previewIcon,
 		nameLabel = e(StudioComponents.Label, {
 			Text = props.entry.instance.Name,
-			Size = UDim2.fromOffset(s - 4, NAME_ROW_HEIGHT),
-			Position = UDim2.fromOffset(2, s - NAME_ROW_HEIGHT - 2),
+			Size = UDim2.fromOffset(s - 4, Constants.THUMB_NAME_ROW_HEIGHT),
+			Position = UDim2.fromOffset(2, s - Constants.THUMB_NAME_ROW_HEIGHT - 2),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,

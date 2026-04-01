@@ -4,10 +4,9 @@ local StudioComponents = require(Packages.studiocomponents)
 
 local StoreContext = require(script.Parent.Parent.StoreContext)
 local RenderThumb = require(script.Parent.RenderThumb)
+local Constants = require(script.Parent.Parent.Constants)
 
 local e = React.createElement
-
-local PADDING_V = 9
 
 type Props = {
 	onPreviewRender: (index: number) -> (),
@@ -17,9 +16,9 @@ local function RenderStrip(props: Props)
 	local store = StoreContext.useStore()
 	local state = store.state
 	local theme = StudioComponents.useTheme()
-	local stripHeight, setStripHeight = React.useState(80)
+	local stripHeight, setStripHeight = React.useState(Constants.STRIP_DEFAULT_HEIGHT)
 
-	local thumbSize = math.max(20, stripHeight - PADDING_V * 2)
+	local thumbSize = math.max(Constants.THUMB_MIN_SIZE, stripHeight - Constants.STRIP_PADDING_V * 2)
 
 	local onAbsoluteSize = function(rbx: Frame)
 		local h = math.floor(rbx.AbsoluteSize.Y)
@@ -68,13 +67,13 @@ local function RenderStrip(props: Props)
 				ClassName = "UIListLayout",
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 6),
+				Padding = Constants.LIST_PADDING,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			},
-			PaddingLeft = UDim.new(0, 8),
-			PaddingRight = UDim.new(0, 8),
-			PaddingTop = UDim.new(0, PADDING_V),
-			PaddingBottom = UDim.new(0, PADDING_V),
+			PaddingLeft = UDim.new(0, Constants.PADDING_8),
+			PaddingRight = UDim.new(0, Constants.PADDING_8),
+			PaddingTop = UDim.new(0, Constants.STRIP_PADDING_V),
+			PaddingBottom = UDim.new(0, Constants.STRIP_PADDING_V),
 		}, thumbs),
 	})
 end

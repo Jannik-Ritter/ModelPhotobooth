@@ -2,6 +2,8 @@ local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
+local Constants = require(script.Parent.Parent.Parent.Constants)
+
 local e = React.createElement
 
 type Props = {
@@ -37,10 +39,10 @@ local function CollapsibleSection(props: Props)
 			setHovered(false)
 		end,
 	}, {
-		corner = e("UICorner", { CornerRadius = UDim.new(0, 4) }),
+		corner = e("UICorner", { CornerRadius = UDim.new(0, Constants.CORNER_RADIUS_4) }),
 		padding = e("UIPadding", {
-			PaddingLeft = UDim.new(0, 8),
-			PaddingRight = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, Constants.PADDING_8),
+			PaddingRight = UDim.new(0, Constants.PADDING_8),
 		}),
 		chevron = e("TextLabel", {
 			Text = if props.collapsed then "\u{25B6}" else "\u{25BC}",
@@ -54,7 +56,7 @@ local function CollapsibleSection(props: Props)
 		title = e("TextLabel", {
 			Text = props.title,
 			Size = UDim2.new(1, -14, 1, 0),
-			Position = UDim2.new(0, 14, 0, 0),
+			Position = UDim2.fromOffset(14, 0),
 			BackgroundTransparency = 1,
 			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
 			TextSize = 14,
@@ -65,21 +67,21 @@ local function CollapsibleSection(props: Props)
 
 	if not props.collapsed then
 		children["content"] = e("Frame", {
-			Size = UDim2.new(1, 0, 0, 0),
+			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
 			LayoutOrder = 1,
 		}, {
 			padding = e("UIPadding", {
-				PaddingLeft = UDim.new(0, 4),
-				PaddingRight = UDim.new(0, 4),
-				PaddingTop = UDim.new(0, 4),
-				PaddingBottom = UDim.new(0, 4),
+				PaddingLeft = UDim.new(0, Constants.PADDING_8),
+				PaddingRight = UDim.new(0, Constants.PADDING_8),
+				PaddingTop = UDim.new(0, Constants.PADDING_8),
+				PaddingBottom = UDim.new(0, Constants.PADDING_8),
 			}),
 			layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 4),
+				Padding = Constants.LIST_PADDING_SMALL,
 			}),
 			children = React.createElement(React.Fragment, nil, props.children),
 		})
@@ -88,11 +90,11 @@ local function CollapsibleSection(props: Props)
 	children["listLayout"] = e("UIListLayout", {
 		FillDirection = Enum.FillDirection.Vertical,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 2),
+		Padding = Constants.GROUP_PADDING,
 	})
 
 	return e("Frame", {
-		Size = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		BackgroundTransparency = 1,
 		LayoutOrder = props.LayoutOrder,

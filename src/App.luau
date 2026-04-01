@@ -35,7 +35,9 @@ local function App(props: Props)
 	local activeAnimationIndexRef = React.useRef(nil :: number?)
 	local uploadingRef = React.useRef(false)
 
-	React.useEffect(function() modelsRef.current = state.models end)
+	React.useEffect(function()
+		modelsRef.current = state.models
+	end)
 
 	local toasts = useToasts()
 	local widgetInput = useWidgetInput(dispatch, animationPlayingRef, activeAnimationIndexRef)
@@ -46,7 +48,7 @@ local function App(props: Props)
 	local activeEntry = if focusedIndex then state.models[focusedIndex] else nil
 	local activeInstance = if activeEntry then activeEntry.instance else nil
 
-	useAnimationDetection(dispatch, activeInstance, animationPlayingRef, activeAnimationIndexRef)
+	useAnimationDetection(dispatch, activeInstance)
 
 	React.useEffect(function()
 		animationPlayingRef.current = state.animationPlaying
@@ -64,9 +66,8 @@ local function App(props: Props)
 	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
 	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
 	local stripTab, setStripTab = React.useState("Models")
-	local helpOpen, setHelpOpen = React.useState(
-		if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else nil :: string?
-	)
+	local helpOpen, setHelpOpen =
+		React.useState(if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else nil :: string?)
 	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
 
 	local cameraInput = useCameraInput(state, dispatch, widgetInput.isCtrlDown)
@@ -82,7 +83,9 @@ local function App(props: Props)
 					table.insert(next, i)
 				end
 			end
-			if not found then table.insert(next, index) end
+			if not found then
+				table.insert(next, index)
+			end
 			dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
 		else
 			local alreadySelected = #state.selectedModelIndices == 1 and state.selectedModelIndices[1] == index
@@ -134,7 +137,9 @@ local function App(props: Props)
 	local deleteConfirmName = ""
 	if deleteConfirmIndex then
 		local preset = state.presets[deleteConfirmIndex]
-		if preset then deleteConfirmName = preset.name end
+		if preset then
+			deleteConfirmName = preset.name
+		end
 	end
 
 	local modals = ModalManager({
@@ -150,8 +155,12 @@ local function App(props: Props)
 		deleteConfirmIndex = deleteConfirmIndex,
 		deleteConfirmName = deleteConfirmName,
 		helpOpen = helpOpen,
-		hasPrevPreview = if previewNav.previewFromHistory then previewNav.prevHistoryIndex ~= nil else previewNav.prevRenderedIndex ~= nil,
-		hasNextPreview = if previewNav.previewFromHistory then previewNav.nextHistoryIndex ~= nil else previewNav.nextRenderedIndex ~= nil,
+		hasPrevPreview = if previewNav.previewFromHistory
+			then previewNav.prevHistoryIndex ~= nil
+			else previewNav.prevRenderedIndex ~= nil,
+		hasNextPreview = if previewNav.previewFromHistory
+			then previewNav.nextHistoryIndex ~= nil
+			else previewNav.nextRenderedIndex ~= nil,
 		hideRerender = previewNav.previewFromHistory,
 		onClosePreview = modalHandlers.onClosePreview,
 		onExportPreview = modalHandlers.onExportPreview,
@@ -209,13 +218,17 @@ local function App(props: Props)
 				onSavePreset = presets.openSaveModal,
 				onApplyPreset = presets.applyPreset,
 				onRenamePreset = presets.openRenameModal,
-				onDeletePreset = function(index) setDeleteConfirmIndex(index) end,
+				onDeletePreset = function(index)
+					setDeleteConfirmIndex(index)
+				end,
 				onRender = rendering.startRenderSelected,
 				onRenderAll = rendering.startRenderAll,
 				onExport = exporting.doExport,
 				onExportSelected = exporting.doExportSelected,
 				onUploadAll = uploading.doUploadAll,
-				onHelp = function() setHelpOpen("General") end,
+				onHelp = function()
+					setHelpOpen("General")
+				end,
 			}),
 			modals = e("Folder", {}, modals),
 		}),

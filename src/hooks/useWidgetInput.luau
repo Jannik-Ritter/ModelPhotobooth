@@ -1,6 +1,7 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local Store = require(script.Parent.Parent.Store)
+local Constants = require(script.Parent.Parent.Constants)
 
 return function(
 	dispatch: (any) -> (),
@@ -59,7 +60,7 @@ return function(
 		Active = true,
 		Text = "",
 		AutoButtonColor = false,
-		ZIndex = 9999,
+		ZIndex = Constants.ZINDEX_OVERLAY,
 		[React.Event.InputBegan] = onWidgetInputBegan,
 		[React.Event.InputEnded] = onWidgetInputEnded,
 	}

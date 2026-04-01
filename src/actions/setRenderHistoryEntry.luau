@@ -1,6 +1,5 @@
 local shallowMerge = require(script.Parent.Parent.lib.shallowMerge).merge
-
-local MAX_HISTORY = 25
+local Constants = require(script.Parent.Parent.Constants)
 
 return function(state, action)
 	local newHistory = table.clone(state.renderHistory)
@@ -9,7 +8,7 @@ return function(state, action)
 		modelName = action.modelName,
 		modelIndex = action.modelIndex,
 	})
-	while #newHistory > MAX_HISTORY do
+	while #newHistory > Constants.MAX_RENDER_HISTORY do
 		table.remove(newHistory)
 	end
 	return shallowMerge(state, { renderHistory = newHistory })

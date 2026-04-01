@@ -3,6 +3,7 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local limitDecimals = require(script.Parent.Parent.Parent.utils.limitDecimals)
+local Constants = require(script.Parent.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -45,14 +46,14 @@ local function SliderRow(props: Props)
 	end
 
 	return e("Frame", {
-		Size = UDim2.new(1, 0, 0, 22),
+		Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 		BackgroundTransparency = 1,
 		LayoutOrder = props.layoutOrder,
 	}, {
 		layout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 6),
+			Padding = Constants.LIST_PADDING,
 			VerticalAlignment = Enum.VerticalAlignment.Center,
 		}),
 		label = e(StudioComponents.Label, {
@@ -76,7 +77,7 @@ local function SliderRow(props: Props)
 			BackgroundTransparency = if isEditing then 0 else 1,
 			BorderSizePixel = 0,
 			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
-			TextSize = 13,
+			TextSize = Constants.TEXT_SIZE_SMALL,
 			Font = Enum.Font.SourceSans,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			ClearTextOnFocus = false,

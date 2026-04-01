@@ -18,7 +18,7 @@ type Props = {
 local function ModalTitleBar(props: Props)
 	local theme = StudioComponents.useTheme()
 	local hasClose = props.onClose ~= nil
-	local textSize = props.textSize or 18
+	local textSize = props.textSize or Constants.TEXT_SIZE_HEADING
 
 	return e("Frame", {
 		Size = UDim2.new(1, 0, 0, Constants.MODAL_TITLE_BAR_HEIGHT),

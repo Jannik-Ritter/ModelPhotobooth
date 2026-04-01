@@ -30,7 +30,7 @@ local BG_PRESETS = {
 	{ label = "Custom", mode = "custom", color = nil },
 }
 local DROPDOWN_ROW_HEIGHT = 20
-local DROPDOWN_LABEL_TEXT_SIZE = 16
+local DROPDOWN_LABEL_TEXT_SIZE = Constants.TEXT_SIZE_BODY
 local DROPDOWN_LABEL_WIDTHS = {
 	Preset = 52,
 	Color = 52,
@@ -121,14 +121,14 @@ local function Sidebar(props: Props)
 	for i, preset in ipairs(state.presets) do
 		local idx = i
 		presetRows["preset_" .. i] = e("Frame", {
-			Size = UDim2.new(1, 0, 0, 26),
+			Size = UDim2.new(1, 0, 0, Constants.HEADER_HEIGHT),
 			BackgroundTransparency = 1,
 			LayoutOrder = i + 1,
 		}, {
 			layout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 4),
+				Padding = Constants.LIST_PADDING_SMALL,
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
 			name = e(StudioComponents.Label, {
@@ -143,7 +143,7 @@ local function Sidebar(props: Props)
 				OnActivated = function()
 					props.onApplyPreset(idx)
 				end,
-				Size = UDim2.fromOffset(48, 22),
+				Size = UDim2.fromOffset(48, Constants.BUTTON_HEIGHT),
 				LayoutOrder = 2,
 			}),
 			rename = e(StudioComponents.Button, {
@@ -151,7 +151,7 @@ local function Sidebar(props: Props)
 				OnActivated = function()
 					props.onRenamePreset(idx)
 				end,
-				Size = UDim2.fromOffset(26, 22),
+				Size = UDim2.fromOffset(26, Constants.BUTTON_HEIGHT),
 				LayoutOrder = 3,
 			}),
 			delete = e(StudioComponents.Button, {
@@ -159,14 +159,14 @@ local function Sidebar(props: Props)
 				OnActivated = function()
 					props.onDeletePreset(idx)
 				end,
-				Size = UDim2.fromOffset(26, 22),
+				Size = UDim2.fromOffset(26, Constants.BUTTON_HEIGHT),
 				LayoutOrder = 4,
 			}),
 		})
 	end
 	presetRows["layout"] = e("UIListLayout", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, 4),
+		Padding = Constants.LIST_PADDING_SMALL,
 	})
 
 	local settingsContent = e(StudioComponents.ScrollFrame, {
@@ -175,12 +175,12 @@ local function Sidebar(props: Props)
 		Layout = {
 			ClassName = "UIListLayout",
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 4),
+			Padding = Constants.LIST_PADDING_SMALL,
 		},
-		PaddingLeft = UDim.new(0, 6),
-		PaddingRight = UDim.new(0, 6),
-		PaddingTop = UDim.new(0, 6),
-		PaddingBottom = UDim.new(0, 6),
+		PaddingLeft = Constants.LIST_PADDING,
+		PaddingRight = Constants.LIST_PADDING,
+		PaddingTop = Constants.LIST_PADDING,
+		PaddingBottom = Constants.LIST_PADDING,
 	}, {
 		-- Export section
 		export = e(CollapsibleSection, {
@@ -197,7 +197,7 @@ local function Sidebar(props: Props)
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
 				label = dropdownLabel("Resolution", DROPDOWN_LABEL_WIDTHS.Resolution),
@@ -214,7 +214,7 @@ local function Sidebar(props: Props)
 							end
 						end
 					end,
-					RowHeight = 22,
+					RowHeight = Constants.ROW_HEIGHT,
 					Size = UDim2.new(1, -70, 1, 0),
 					LayoutOrder = 2,
 				}),
@@ -236,7 +236,7 @@ local function Sidebar(props: Props)
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
 				label = dropdownLabel("Preset", DROPDOWN_LABEL_WIDTHS.Preset),
@@ -256,7 +256,7 @@ local function Sidebar(props: Props)
 							})
 						end
 					end,
-					RowHeight = 22,
+					RowHeight = Constants.ROW_HEIGHT,
 					Size = UDim2.new(1, -58, 1, 0),
 					LayoutOrder = 2,
 				}),
@@ -292,8 +292,8 @@ local function Sidebar(props: Props)
 			roll = e(SliderRow, {
 				label = "Roll",
 				value = state.roll,
-				min = -180,
-				max = 180,
+				min = Constants.ROLL_MIN,
+				max = Constants.ROLL_MAX,
 				onChanged = function(v)
 					dispatch({ type = A.SET_ROLL, value = v })
 				end,
@@ -310,7 +310,7 @@ local function Sidebar(props: Props)
 				outerLayout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Vertical,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 2),
+					Padding = Constants.GROUP_PADDING,
 				}),
 				header = e(StudioComponents.Label, {
 					Text = "Offset",
@@ -318,14 +318,14 @@ local function Sidebar(props: Props)
 					LayoutOrder = 1,
 				}),
 				inputs = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 22),
+					Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 					BackgroundTransparency = 1,
 					LayoutOrder = 2,
 				}, {
 					layout = e("UIListLayout", {
 						FillDirection = Enum.FillDirection.Horizontal,
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 4),
+						Padding = Constants.LIST_PADDING_SMALL,
 						VerticalAlignment = Enum.VerticalAlignment.Center,
 					}),
 					labelX = e(StudioComponents.Label, {
@@ -417,17 +417,17 @@ local function Sidebar(props: Props)
 			listLayout = e("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 4),
+				Padding = Constants.LIST_PADDING_SMALL,
 			}),
 			lightColorRow = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 22),
+				Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 				BackgroundTransparency = 1,
 				LayoutOrder = 1,
 			}, {
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
 				label = e(StudioComponents.Label, {
@@ -448,22 +448,22 @@ local function Sidebar(props: Props)
 						dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 					end,
 				}, {
-					corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+					corner = e("UICorner", { CornerRadius = UDim.new(0, Constants.CORNER_RADIUS_3) }),
 					stroke = e("UIStroke", {
 						Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-						Thickness = 1,
+						Thickness = Constants.STROKE_THIN,
 					}),
 				}),
 			}),
 			ambientRow = e("Frame", {
-				Size = UDim2.new(1, 0, 0, 22),
+				Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 				BackgroundTransparency = 1,
 				LayoutOrder = 2,
 			}, {
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
 				label = e(StudioComponents.Label, {
@@ -484,10 +484,10 @@ local function Sidebar(props: Props)
 						dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 					end,
 				}, {
-					corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+					corner = e("UICorner", { CornerRadius = UDim.new(0, Constants.CORNER_RADIUS_3) }),
 					stroke = e("UIStroke", {
 						Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-						Thickness = 1,
+						Thickness = Constants.STROKE_THIN,
 					}),
 				}),
 			}),
@@ -499,7 +499,7 @@ local function Sidebar(props: Props)
 				outerLayout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Vertical,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 2),
+					Padding = Constants.GROUP_PADDING,
 				}),
 				header = e(StudioComponents.Label, {
 					Text = "Direction",
@@ -507,14 +507,14 @@ local function Sidebar(props: Props)
 					LayoutOrder = 1,
 				}),
 				inputs = e("Frame", {
-					Size = UDim2.new(1, 0, 0, 22),
+					Size = UDim2.new(1, 0, 0, Constants.ROW_HEIGHT),
 					BackgroundTransparency = 1,
 					LayoutOrder = 2,
 				}, {
 					layout = e("UIListLayout", {
 						FillDirection = Enum.FillDirection.Horizontal,
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 4),
+						Padding = Constants.LIST_PADDING_SMALL,
 						VerticalAlignment = Enum.VerticalAlignment.Center,
 					}),
 					labelX = e(StudioComponents.Label, {
@@ -599,7 +599,7 @@ local function Sidebar(props: Props)
 			}),
 			syncButton = e(StudioComponents.Button, {
 				Text = "Sync Lighting",
-				Size = UDim2.new(1, 0, 0, 24),
+				Size = UDim2.new(1, 0, 0, Constants.BUTTON_HEIGHT),
 				LayoutOrder = 4,
 				OnActivated = function()
 					dispatch({ type = A.SET_LIGHTING, value = {
@@ -624,7 +624,7 @@ local function Sidebar(props: Props)
 				layout = e("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, 6),
+					Padding = Constants.LIST_PADDING,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 				}),
 				label = dropdownLabel("Color", DROPDOWN_LABEL_WIDTHS.Color),
@@ -644,7 +644,7 @@ local function Sidebar(props: Props)
 							end
 						end
 					end,
-					RowHeight = 22,
+					RowHeight = Constants.ROW_HEIGHT,
 					Size = UDim2.new(1, -58, 1, 0),
 					LayoutOrder = 2,
 				}),
@@ -658,7 +658,7 @@ local function Sidebar(props: Props)
 					layout = e("UIListLayout", {
 						FillDirection = Enum.FillDirection.Horizontal,
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, 6),
+						Padding = Constants.LIST_PADDING,
 						VerticalAlignment = Enum.VerticalAlignment.Center,
 						HorizontalFlex = Enum.UIFlexAlignment.Fill,
 					}),
@@ -676,10 +676,10 @@ local function Sidebar(props: Props)
 						end,
 					}, {
 						aspectRatioConstraint = e("UIAspectRatioConstraint", { AspectRatio = 1 }),
-						corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
+						corner = e("UICorner", { CornerRadius = UDim.new(0, Constants.CORNER_RADIUS_3) }),
 						stroke = e("UIStroke", {
 							Color = theme:GetColor(Enum.StudioStyleGuideColor.Border),
-							Thickness = 1,
+							Thickness = Constants.STROKE_THIN,
 						}),
 					}),
 				})
@@ -886,21 +886,21 @@ local function Sidebar(props: Props)
 		Layout = {
 			ClassName = "UIListLayout",
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 4),
+			Padding = Constants.LIST_PADDING_SMALL,
 		},
-		PaddingLeft = UDim.new(0, 6),
-		PaddingRight = UDim.new(0, 6),
-		PaddingTop = UDim.new(0, 6),
-		PaddingBottom = UDim.new(0, 6),
+		PaddingLeft = Constants.LIST_PADDING,
+		PaddingRight = Constants.LIST_PADDING,
+		PaddingTop = Constants.LIST_PADDING,
+		PaddingBottom = Constants.LIST_PADDING,
 	}, {
 		saveButton = e(StudioComponents.MainButton, {
 			Text = "Save Current",
 			OnActivated = props.onSavePreset,
-			Size = UDim2.new(1, 0, 0, 24),
+			Size = UDim2.new(1, 0, 0, Constants.BUTTON_HEIGHT),
 			LayoutOrder = 1,
 		}),
 		spacer = e("Frame", {
-			Size = UDim2.new(1, 0, 0, 8),
+			Size = UDim2.new(1, 0, 0, Constants.PADDING_8),
 			BackgroundTransparency = 1,
 			LayoutOrder = 2,
 		}),

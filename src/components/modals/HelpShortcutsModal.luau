@@ -16,9 +16,9 @@ type Props = {
 local ROW_HEIGHT = 22
 local SECTION_GAP = 10
 
-local HEADING_TEXT_SIZE = 18
+local HEADING_TEXT_SIZE = Constants.TEXT_SIZE_HEADING
 local SECTION_TEXT_SIZE = 17
-local CONTENT_TEXT_SIZE = 16
+local CONTENT_TEXT_SIZE = Constants.TEXT_SIZE_BODY
 
 local function sectionHeader(theme, text: string, layoutOrder: number)
 	return e("TextLabel", {

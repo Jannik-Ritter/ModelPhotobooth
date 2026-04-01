@@ -1,7 +1,8 @@
 -- StepAnimations(0) often fails to fully resolve the pose in a WorldModel (partial blend /
 -- low effective weight). Real playback uses StepAnimations(dt) with dt > 0. For scrubbing we
 -- freeze the track, step with a nominal frame, then snap TimePosition back if anything drifted.
-local POSE_RESOLVE_DT = 1 / 60
+local Constants = require(script.Parent.Parent.Constants)
+local POSE_RESOLVE_DT = Constants.FRAME_DT
 
 local function applyAnimationPoseAtTime(animator: Animator, track: AnimationTrack, timePosition: number)
 	track:AdjustSpeed(0)

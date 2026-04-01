@@ -3,10 +3,9 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Store = require(script.Parent.Parent.Store)
+local Constants = require(script.Parent.Parent.Constants)
 
 local e = React.createElement
-
-local NAME_ROW_HEIGHT = 16
 
 type Props = {
 	entry: Store.RenderHistoryEntry,
@@ -20,7 +19,7 @@ local function RenderThumb(props: Props)
 	local theme = StudioComponents.useTheme()
 
 	local s = props.thumbSize
-	local contentH = s - NAME_ROW_HEIGHT - 4
+	local contentH = s - Constants.THUMB_NAME_ROW_HEIGHT - 4
 
 	local content = e("ImageLabel", {
 		Size = UDim2.fromOffset(s - 4, contentH),
@@ -46,13 +45,13 @@ local function RenderThumb(props: Props)
 	}, {
 		stroke = e("UIStroke", {
 			Color = if props.isActive then accentColor else theme:GetColor(Enum.StudioStyleGuideColor.Border),
-			Thickness = if props.isActive then 2 else 1,
+			Thickness = if props.isActive then Constants.STROKE_ACTIVE else Constants.STROKE_THIN,
 		}),
 		content = content,
 		nameLabel = e(StudioComponents.Label, {
 			Text = props.entry.modelName,
-			Size = UDim2.fromOffset(s - 4, NAME_ROW_HEIGHT),
-			Position = UDim2.fromOffset(2, s - NAME_ROW_HEIGHT - 2),
+			Size = UDim2.fromOffset(s - 4, Constants.THUMB_NAME_ROW_HEIGHT),
+			Position = UDim2.fromOffset(2, s - Constants.THUMB_NAME_ROW_HEIGHT - 2),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,

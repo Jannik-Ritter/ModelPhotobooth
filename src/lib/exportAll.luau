@@ -3,13 +3,12 @@ local Types = require(script.Parent.Parent.Types)
 local Constants = require(script.Parent.Parent.Constants)
 
 local MPB_TAG = Constants.MPB_TAG
-local EXPORT_FOLDER = "PhotoboothExports"
 
 local function getOrCreateFolder(): Folder
-	local folder = workspace:FindFirstChild(EXPORT_FOLDER)
+	local folder = workspace:FindFirstChild(Constants.EXPORT_FOLDER_NAME)
 	if not folder then
 		folder = Instance.new("Folder")
-		folder.Name = EXPORT_FOLDER
+		folder.Name = Constants.EXPORT_FOLDER_NAME
 		folder.Parent = workspace
 	end
 	return folder :: Folder
@@ -25,10 +24,10 @@ local function exportEntry(entry: Types.ModelEntry, folder: Folder, n: number): 
 		end
 		local p = Instance.new("MeshPart")
 		p.Name = entry.instance.Name .. "_Icon"
-		p.Size = Vector3.new(4, 4, 0.05)
+		p.Size = Constants.EXPORT_MESH_SIZE
 		p.Anchored = true
 		p.CastShadow = false
-		p.Position = Vector3.new(n * 5, 10, 0)
+		p.Position = Vector3.new(n * Constants.EXPORT_SPACING, 10, 0)
 		p.TextureContent = Content.fromObject(entry.image)
 		CollectionService:AddTag(p, MPB_TAG)
 		p:SetAttribute("MPBSourceName", entry.instance.Name)

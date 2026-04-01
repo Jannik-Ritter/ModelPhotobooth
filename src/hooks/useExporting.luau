@@ -1,5 +1,3 @@
-local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages.react)
 local Selection = game:GetService("Selection")
 local Store = require(script.Parent.Parent.Store)
 local Types = require(script.Parent.Parent.Types)
@@ -7,10 +5,7 @@ local exportAll = require(script.Parent.Parent.lib.exportAll)
 
 type ToastFn = Types.ToastFn
 
-return function(
-	state: Store.AppState,
-	addToast: ToastFn
-)
+return function(state: Store.AppState, addToast: ToastFn)
 	local function doExport()
 		local parts = exportAll.exportAll(state.models)
 		if #parts > 0 then
@@ -32,7 +27,9 @@ return function(
 	end
 
 	local function exportPreviewImage()
-		if not state.previewImage then return end
+		if not state.previewImage then
+			return
+		end
 		local tempEntry = {
 			instance = { Name = state.previewTitle or "Render" },
 			image = state.previewImage,
