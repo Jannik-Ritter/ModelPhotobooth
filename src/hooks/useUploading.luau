@@ -1,9 +1,10 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local Store = require(script.Parent.Parent.Store)
+local Types = require(script.Parent.Parent.Types)
 local uploadOne = require(script.Parent.Parent.lib.uploadOne)
 
-type UploadResult = { name: string, assetId: number? }
+type UploadResult = Types.UploadResult
 
 return function(
 	state: Store.AppState,

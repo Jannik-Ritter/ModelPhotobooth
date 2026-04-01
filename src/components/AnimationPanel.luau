@@ -1,15 +1,13 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
+local Types = require(script.Parent.Parent.Types)
 
 local limitDecimals = require(script.Parent.Parent.utils.limitDecimals)
 
 local e = React.createElement
 
-type AnimationInfo = {
-	name: string,
-	animationId: string,
-}
+type AnimationInfo = Types.AnimationInfo
 
 type Props = {
 	animations: { AnimationInfo },

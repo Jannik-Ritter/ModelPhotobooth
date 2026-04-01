@@ -1,7 +1,8 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
+local Types = require(script.Parent.Parent.Types)
 
-type ToastEntry = { id: number, variant: string, message: string }
+type ToastEntry = Types.ToastEntry
 
 return function()
 	local toasts, setToasts = React.useState({} :: { ToastEntry })

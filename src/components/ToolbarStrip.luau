@@ -3,7 +3,7 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local StoreContext = require(script.Parent.Parent.StoreContext)
-local constants = require(script.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -11,6 +11,7 @@ type Props = {
 	onRender: () -> (),
 	onRenderAll: () -> (),
 	onExport: () -> (),
+	onExportSelected: () -> (),
 	onUploadAll: () -> (),
 	onHelp: () -> (),
 }
@@ -20,29 +21,32 @@ local function ToolbarStrip(props: Props)
 	local state = store.state
 	local theme = StudioComponents.useTheme()
 
-	local totalCount = 0
-	for _, entry in ipairs(state.models) do
-		if not entry.isExported then
-			totalCount += 1
+	local totalCount, hasRenders, hasRenderableSelected, hasSelectedWithRenders = React.useMemo(function()
+		local count = 0
+		local anyRenders = false
+		local renderableSelected = false
+		local selectedWithRenders = false
+		for _, entry in ipairs(state.models) do
+			if not entry.isExported then
+				count += 1
+			end
+			if entry.image then
+				anyRenders = true
+			end
 		end
-	end
-
-	local hasRenders = false
-	for _, entry in ipairs(state.models) do
-		if entry.image then
-			hasRenders = true
-			break
+		for _, idx in ipairs(state.selectedModelIndices) do
+			local entry = state.models[idx]
+			if entry then
+				if not entry.isExported then
+					renderableSelected = true
+				end
+				if entry.image then
+					selectedWithRenders = true
+				end
+			end
 		end
-	end
-
-	local hasRenderableSelected = false
-	for _, idx in ipairs(state.selectedModelIndices) do
-		local entry = state.models[idx]
-		if entry and not entry.isExported then
-			hasRenderableSelected = true
-			break
-		end
-	end
+		return count, anyRenders, renderableSelected, selectedWithRenders
+	end, { state.models, state.selectedModelIndices } :: { any })
 
 	return e("Frame", {
 		Size = UDim2.new(1, 0, 0, 36),
@@ -84,29 +88,36 @@ local function ToolbarStrip(props: Props)
 				Size = UDim2.fromOffset(82, 24),
 				LayoutOrder = 2,
 			}),
+			exportSelected = e(StudioComponents.MainButton, {
+				Text = "Export Selected",
+				OnActivated = props.onExportSelected,
+				Disabled = not hasSelectedWithRenders,
+				Size = UDim2.fromOffset(108, 24),
+				LayoutOrder = 3,
+			}),
 			export = e(StudioComponents.MainButton, {
 				Text = "Export All",
 				OnActivated = props.onExport,
 				Disabled = not hasRenders,
 				Size = UDim2.fromOffset(76, 24),
-				LayoutOrder = 3,
+				LayoutOrder = 4,
 			}),
 			uploadAll = e(StudioComponents.MainButton, {
 				Text = "Upload All",
 				OnActivated = props.onUploadAll,
 				Disabled = not hasRenders,
 				Size = UDim2.fromOffset(76, 24),
-				LayoutOrder = 4,
+				LayoutOrder = 5,
 			}),
 			help = e(StudioComponents.Button, {
 				OnActivated = props.onHelp,
 				Icon = {
 					Image = "rbxassetid://101420100842394",
-					Size = constants.TOOLBAR_ICON_GLYPH,
+					Size = Constants.TOOLBAR_ICON_GLYPH,
 					UseThemeColor = true,
 				},
 				Size = UDim2.fromOffset(24, 24),
-				LayoutOrder = 5,
+				LayoutOrder = 6,
 			}),
 		}),
 	})

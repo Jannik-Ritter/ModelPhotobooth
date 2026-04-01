@@ -35,138 +35,22 @@ Store.ACTIONS = {
 	SET_RENDER_HISTORY_ENTRY = "SET_RENDER_HISTORY_ENTRY",
 }
 
-export type AnimationInfo = {
-	name: string,
-	animationId: string,
-}
+local Types = require(script.Parent.Types)
+local Constants = require(script.Parent.Constants)
 
-export type RenderStatus = "idle" | "pending" | "ok" | "fail"
-
-export type RenderHistoryEntry = {
-	image: EditableImage,
-	modelName: string,
-	modelIndex: number?,
-}
-
-export type ModelEntry = {
-	instance: Instance,
-	status: RenderStatus,
-	image: EditableImage?,
-	isExported: boolean,
-}
-
-export type OutlineState = {
-	enabled: boolean,
-	color: Color3,
-	thickness: number,
-}
-
-export type EffectState = {
-	enabled: boolean,
-	color: Color3,
-	opacity: number,
-	distance: number,
-	blur: number,
-	angle: number,
-}
-
-export type InnerShadowState = {
-	enabled: boolean,
-	color: Color3,
-	opacity: number,
-	distance: number,
-	blur: number,
-	angle: number,
-}
-
-export type OuterGlowState = {
-	enabled: boolean,
-	color: Color3,
-	size: number,
-	opacity: number,
-	blur: number,
-}
-
-export type ChromaticAberrationState = {
-	enabled: boolean,
-	distance: number,
-	opacity: number,
-	angle: number,
-}
-
-export type LightingState = {
-	lightColor: Color3,
-	ambient: Color3,
-	lightDirectionX: number,
-	lightDirectionY: number,
-	lightDirectionZ: number,
-}
-
-export type PresetEntry = {
-	name: string,
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	cameraOffsetX: number,
-	cameraOffsetY: number,
-	cameraOffsetZ: number,
-	bgMode: string,
-	bgColor: Color3,
-	exportSize: number,
-	outline: OutlineState,
-	dropShadow: EffectState,
-	innerShadow: InnerShadowState,
-	outerGlow: OuterGlowState,
-	chromaticAberration: ChromaticAberrationState,
-	lighting: LightingState,
-}
-
-export type NameInputModalState = {
-	mode: "save" | "rename",
-	targetIndex: number?,
-	initialName: string?,
-}
-
-export type AppState = {
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	cameraOffsetX: number,
-	cameraOffsetY: number,
-	cameraOffsetZ: number,
-	outline: OutlineState,
-	dropShadow: EffectState,
-	innerShadow: InnerShadowState,
-	outerGlow: OuterGlowState,
-	chromaticAberration: ChromaticAberrationState,
-	lighting: LightingState,
-	bgMode: string,
-	bgColor: Color3,
-	exportSize: number,
-	models: { ModelEntry },
-	renderHistory: { RenderHistoryEntry },
-	rendering: boolean,
-	renderProgress: number,
-	renderTotal: number,
-	selectedModelIndices: { number },
-	collapsedSections: { [string]: boolean },
-	colorPickerTarget: string?,
-	previewImage: EditableImage?,
-	previewTitle: string?,
-	previewModelIndex: number?,
-	previewHistoryIndex: number?,
-	presets: { PresetEntry },
-	nameInputModal: NameInputModalState?,
-	animations: { AnimationInfo },
-	activeAnimationIndex: number?,
-	animationPlaying: boolean,
-	animationTimePosition: number,
-	animationLength: number,
-}
+export type AnimationInfo = Types.AnimationInfo
+export type RenderStatus = Types.RenderStatus
+export type RenderHistoryEntry = Types.RenderHistoryEntry
+export type ModelEntry = Types.ModelEntry
+export type OutlineState = Types.OutlineState
+export type EffectState = Types.EffectState
+export type InnerShadowState = Types.InnerShadowState
+export type OuterGlowState = Types.OuterGlowState
+export type ChromaticAberrationState = Types.ChromaticAberrationState
+export type LightingState = Types.LightingState
+export type PresetEntry = Types.PresetEntry
+export type NameInputModalState = Types.NameInputModalState
+export type AppState = Types.AppState
 
 Store.DEFAULT_STATE = {
 	yaw = 180 + 45,
@@ -182,13 +66,7 @@ Store.DEFAULT_STATE = {
 	innerShadow = { enabled = false, color = Color3.new(0, 0, 0), opacity = 75, distance = 4, blur = 6, angle = 225 },
 	outerGlow = { enabled = false, color = Color3.new(1, 1, 1), size = 10, opacity = 75, blur = 6 },
 	chromaticAberration = { enabled = false, distance = 4, opacity = 100, angle = 45 },
-	lighting = {
-		lightColor = Color3.new(1, 1, 1),
-		ambient = Color3.fromRGB(160, 160, 160),
-		lightDirectionX = -1,
-		lightDirectionY = -2,
-		lightDirectionZ = -1,
-	},
+	lighting = Constants.DEFAULT_LIGHTING,
 	bgMode = "transparent",
 	bgColor = Color3.new(1, 1, 1),
 	exportSize = 0,
@@ -262,6 +140,11 @@ local handlers = {
 	[A.SET_ANIMATION_LENGTH] = createSetter("animationLength"),
 	[A.SET_RENDER_HISTORY_ENTRY] = require(actions.setRenderHistoryEntry),
 }
+
+-- Startup check: every action constant must have a registered handler.
+for name, key in pairs(A) do
+	assert(handlers[key] ~= nil, "Store: no handler registered for action " .. name)
+end
 
 function Store.reducer(state: AppState, action): AppState
 	local handler = handlers[action.type]

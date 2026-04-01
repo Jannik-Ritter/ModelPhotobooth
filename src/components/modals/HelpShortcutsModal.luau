@@ -4,7 +4,7 @@ local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
 local ModalTitleBar = require(script.Parent.ModalTitleBar)
-local constants = require(script.Parent.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -102,7 +102,7 @@ local function HelpShortcutsModal(props: Props)
 		PaddingBottom = UDim.new(0, 8),
 	}, {
 		warning = e("TextLabel", {
-			Text = "<font color='#FF7800'>Disclaimer: Uploading is currently restricted by Roblox. See Common Issues - 'Upload failed' for more information. Explorting is not affected.</font>",
+			Text = "<font color='#FF7800'>Disclaimer: Uploading is currently restricted by Roblox. See Common Issues - 'Upload failed' for more information. Exporting is not affected.</font>",
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
@@ -117,11 +117,11 @@ local function HelpShortcutsModal(props: Props)
 		}),
 		usageHeader = sectionHeader(theme, "Usage", 1),
 		usageBody = e("TextLabel", {
-			Text = "Select a model or part in the Explorer to add it to the Models strip.\n"
+			Text = "Select a model or part in the Explorer to add it to the Models strip."
 				.. "The right panel contains camera, effects, animation, and export settings. Save your favorites as presets.\n"
-				.. "Click Preview to render, then Export to place the result in Workspace.\n"
-				.. "Click any render in the Renders strip to view it before exporting.\n"
-				.. 'To save as a PNG, export first, then right-click the result and choose "Save/Export" -> "Export as Obj".\n'
+				.. "Click Render Selected to render your model. Use the Renders strip to view your most recent renders. "
+				.. "Click Export Selected to place the renders in Workspace.\n"
+				.. 'To save as a PNG, right-click the exported render and choose "Save/Export" -> "Export as Obj".\n'
 				.. "To render with animation, place a compatible Animation instance inside the model.",
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
@@ -179,7 +179,7 @@ local function HelpShortcutsModal(props: Props)
 			theme,
 			"Make the Roblox viewport (the space where you move your camera) in Studio as big as possible. "
 				.. "It needs to be at least "
-				.. tostring(constants.HELP_MIN_VIEWPORT_PX)
+				.. tostring(Constants.HELP_MIN_VIEWPORT_PX)
 				.. "px tall and wide to support the highest settings. "
 				.. "If that doesn't work, your monitor might be too small. In that case, change the resolution plugin-setting to be smaller."
 				.. "Or alternatively, enable device emulation in Studio settings.",
@@ -189,7 +189,7 @@ local function HelpShortcutsModal(props: Props)
 		uploadHeader = sectionHeader(theme, "Upload failed", 6),
 		uploadBody = bodyText(
 			theme,
-			"Uploading only works if you installed this plugin locally and enabled the CreateAssetAsync Lua API Beta in Studio settings. If you installed the plugin from the Creatore Store, you will unfotunately have to wait until Roblox releases this API endpoint.\nIn the mean time, exporting works just fine too, you just have to upload the PNG files to Roblox yourself. ",
+			"Currently, uploading only works if you installed this plugin locally and enabled the CreateAssetAsync Lua API Beta in Studio settings. If you installed the plugin from the Creator Store, you will unfotunately have to wait until Roblox releases this API endpoint.\nIn the meantime, exporting essentially does the same thing, you just have to upload the PNG files to Roblox yourself.\nIf you really want to, you can upload the source files as a local plugin, but I don't recommend doing that. It would work, but freeze the plugin version and reset your presets. ",
 			7
 		),
 		spacerContact = spacer(8),

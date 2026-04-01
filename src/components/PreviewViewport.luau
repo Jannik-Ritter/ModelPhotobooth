@@ -1,15 +1,13 @@
-local RunService = game:GetService("RunService")
-
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
+local Types = require(script.Parent.Parent.Types)
 
 local applyCamera = require(script.Parent.Parent.lib.applyCamera)
-local Store = require(script.Parent.Parent.Store)
 local StoreContext = require(script.Parent.Parent.StoreContext)
 local useTrackball = require(script.Parent.Parent.hooks.useTrackball)
-local waitForAnimationTrackLength = require(script.Parent.Parent.utils.waitForAnimationTrackLength)
-local constants = require(script.Parent.Parent.constants)
+local useAnimationPlayback = require(script.Parent.Parent.hooks.useAnimationPlayback)
+local Constants = require(script.Parent.Parent.Constants)
 local AnimationPanel = require(script.Parent.AnimationPanel)
 local ModelViewport = require(script.Parent.ModelViewport)
 
@@ -22,18 +20,6 @@ local CURSOR_ORBIT_HOVER = "rbxasset://SystemCursors/OpenHand"
 local CURSOR_ORBIT_DRAG = "rbxasset://SystemCursors/ClosedHand"
 local CURSOR_PAN = "rbxasset://SystemCursors/Cross"
 
--- StepAnimations(0) often fails to fully resolve the pose in a WorldModel (partial blend / low
--- effective weight). Real playback uses StepAnimations(dt) with dt > 0. For scrubbing we freeze
--- the track, step with a nominal frame, then snap TimePosition back if anything drifted.
-local POSE_RESOLVE_DT = 1 / 60
-
-local function applyAnimationPoseAtTime(animator: Animator, track: AnimationTrack, timePosition: number)
-	track:AdjustSpeed(0)
-	track.TimePosition = timePosition
-	animator:StepAnimations(POSE_RESOLVE_DT)
-	track.TimePosition = timePosition
-end
-
 -- Equivalent angle in (-180, 180] for display (rotation math uses unbounded degrees)
 local function wrapSigned180(deg: number): number
 	local x = (deg % 360 + 360) % 360
@@ -43,10 +29,7 @@ local function wrapSigned180(deg: number): number
 	return x
 end
 
-type AnimationInfo = {
-	name: string,
-	animationId: string,
-}
+type AnimationInfo = Types.AnimationInfo
 
 type Props = {
 	entry: {
@@ -92,45 +75,6 @@ local function toCameraStateParams(state: CameraState): applyCamera.CameraParams
 	}
 end
 
-local function stopAndDestroyTrack(trackRef: { current: AnimationTrack? }, animator: Animator?)
-	local track = trackRef.current
-	if track then
-		track:Stop(0)
-		track:Destroy()
-		trackRef.current = nil
-		-- Step to reset the rig to default pose now that no tracks are playing
-		if animator then
-			animator:StepAnimations(0)
-		end
-	end
-end
-
-local function getOrCreateAnimator(clone: Instance): Animator?
-	local humanoid = clone:FindFirstChildWhichIsA("Humanoid")
-	if humanoid then
-		local animator = humanoid:FindFirstChildWhichIsA("Animator")
-		if not animator then
-			animator = Instance.new("Animator")
-			animator.Parent = humanoid
-		end
-		return animator
-	end
-
-	local animController = clone:FindFirstChildWhichIsA("AnimationController")
-	if not animController then
-		animController = Instance.new("AnimationController")
-		animController.Parent = clone
-	end
-
-	local animator = animController:FindFirstChildWhichIsA("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = animController
-	end
-
-	return animator
-end
-
 local function getCloneSizeMagnitude(clone: Instance): number
 	local sizeMagnitude = 4 * math.sqrt(3)
 	pcall(function()
@@ -158,8 +102,6 @@ local function PreviewViewport(props: Props)
 	local camRef = React.useRef(nil :: Camera?)
 	local cloneRef = React.useRef(nil :: Instance?)
 	local boundsRef = React.useRef(nil :: { cf: CFrame, size: Vector3 }?)
-	local trackRef = React.useRef(nil :: AnimationTrack?)
-	local animatorRef = React.useRef(nil :: Animator?)
 
 	local cameraStateRef = React.useRef({
 		yaw = state.yaw,
@@ -203,153 +145,12 @@ local function PreviewViewport(props: Props)
 		end
 	end, { activeInstance })
 
-	-- Load animation track when active animation changes
-	React.useEffect(function()
-		local clone = cloneRef.current
-		if not clone then
-			return
-		end
-
-		stopAndDestroyTrack(trackRef, animatorRef.current)
-
-		if not state.activeAnimationIndex then
-			animatorRef.current = nil
-			return
-		end
-
-		local animInfo = state.animations[state.activeAnimationIndex]
-		if not animInfo then
-			animatorRef.current = nil
-			return
-		end
-
-		local animator = getOrCreateAnimator(clone)
-		if not animator then
-			animatorRef.current = nil
-			return
-		end
-		animatorRef.current = animator
-
-		local anim = Instance.new("Animation")
-		anim.AnimationId = animInfo.animationId
-		local track: AnimationTrack?
-		local loadOk = pcall(function()
-			track = animator:LoadAnimation(anim)
-		end)
-		anim:Destroy()
-		if not loadOk or not track then
-			return
-		end
-
-		track.Priority = Enum.AnimationPriority.Action4
-		track.Looped = true
-		track:Play(0)
-		trackRef.current = track
-
-		-- Wait for animation to load before applying pose (StepAnimations needs loaded data)
-		local lengthPromise = waitForAnimationTrackLength(track)
-		lengthPromise
-			:andThen(function()
-				if trackRef.current ~= track then
-					return
-				end
-				dispatch({ type = Store.ACTIONS.SET_ANIMATION_LENGTH, value = track.Length })
-				-- Only apply frozen pose when paused; when playing the Heartbeat effect handles playback
-				if not state.animationPlaying then
-					applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
-				else
-					track.TimePosition = state.animationTimePosition
-				end
-				-- Re-apply camera after pose changes so the preview updates immediately
-				if camRef.current and cloneRef.current then
-					applyCamera(
-						camRef.current,
-						cloneRef.current,
-						toCameraStateParams(cameraStateRef.current),
-						boundsRef.current
-					)
-				end
-			end)
-			:catch(function(error)
-				print(error)
-			end)
-
-		return function()
-			if trackRef.current == track then
-				track:Stop(0)
-				track:Destroy()
-				trackRef.current = nil
-				-- Reset pose when cleaning up this animation
-				local anim = animatorRef.current
-				if anim then
-					anim:StepAnimations(0)
-				end
-			end
-		end
-	end, { state.activeAnimationIndex, activeInstance } :: { any })
-
-	-- Scrub when paused (external time position change from scrubber)
-	React.useEffect(function()
-		local track = trackRef.current
-		local animator = animatorRef.current
-		if not track or not animator or state.animationPlaying then
-			return
-		end
-
-		applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
-
-		local camera = camRef.current
-		local clone = cloneRef.current
-		if camera and clone then
-			applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
-		end
-	end, { state.animationTimePosition, state.animationPlaying, state.activeAnimationIndex })
-
-	-- Apply pose when track becomes available (handles "just loaded" case when paused)
-	React.useEffect(function()
-		local track = trackRef.current
-		local animator = animatorRef.current
-		if not track or not animator or state.animationPlaying then
-			return
-		end
-
-		applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
-
-		local camera = camRef.current
-		local clone = cloneRef.current
-		if camera and clone then
-			applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
-		end
-	end, { state.activeAnimationIndex })
-
-	-- Manual playback via StepAnimations during Heartbeat
-	React.useEffect(function()
-		if not state.animationPlaying then
-			return
-		end
-
-		local track = trackRef.current
-		local animator = animatorRef.current
-		if not track or not animator then
-			return
-		end
-
-		track:AdjustSpeed(1)
-
-		local conn = RunService.Heartbeat:Connect(function(dt)
-			animator:StepAnimations(dt)
-			local camera = camRef.current
-			local clone = cloneRef.current
-			if camera and clone then
-				applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
-			end
-			dispatch({ type = Store.ACTIONS.SET_ANIMATION_TIME, value = track.TimePosition })
-		end)
-
-		return function()
-			conn:Disconnect()
-		end
-	end, { state.animationPlaying, state.activeAnimationIndex, activeInstance })
+	useAnimationPlayback(state, dispatch, activeInstance, {
+		cloneRef = cloneRef,
+		camRef = camRef,
+		boundsRef = boundsRef,
+		cameraStateRef = cameraStateRef,
+	})
 
 	-- Trackball / translate
 	local trackball = useTrackball(function(dx: number, dy: number)
@@ -372,9 +173,9 @@ local function PreviewViewport(props: Props)
 			camState.offsetX += delta.X
 			camState.offsetY += delta.Y
 			camState.offsetZ += delta.Z
-			camState.offsetX = math.clamp(camState.offsetX, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
-			camState.offsetY = math.clamp(camState.offsetY, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
-			camState.offsetZ = math.clamp(camState.offsetZ, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
+			camState.offsetX = math.clamp(camState.offsetX, Constants.CAMERA_OFFSET_MIN, Constants.CAMERA_OFFSET_MAX)
+			camState.offsetY = math.clamp(camState.offsetY, Constants.CAMERA_OFFSET_MIN, Constants.CAMERA_OFFSET_MAX)
+			camState.offsetZ = math.clamp(camState.offsetZ, Constants.CAMERA_OFFSET_MIN, Constants.CAMERA_OFFSET_MAX)
 			applyCamera(camera, clone, toCameraStateParams(camState), boundsRef.current)
 			props.onTranslate(delta.X, delta.Y, delta.Z)
 			return

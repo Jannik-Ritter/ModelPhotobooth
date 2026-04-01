@@ -88,25 +88,31 @@ local function EffectPreview(props: Props)
 	-- Regenerate preview whenever any effect setting changes.
 	-- shallowMerge in the reducer creates new table identities on each dispatch,
 	-- so table identity comparison correctly detects any field change.
+	-- Debounced so rapid slider drags don't allocate a new EditableImage every frame.
 	React.useEffect(
 		function()
-			local buf = drawBaseCircle(dotColor)
-			buf = postProcess.applyImageEffects(buf, CANVAS, CANVAS, {
-				innerShadow = props.innerShadow,
-				outline = props.outline,
-				dropShadow = props.dropShadow,
-				chromaticAberration = props.chromaticAberration,
-				outerGlow = props.outerGlow,
-			})
+			local handle = task.delay(0.05, function()
+				local buf = drawBaseCircle(dotColor)
+				buf = postProcess.applyImageEffects(buf, CANVAS, CANVAS, {
+					innerShadow = props.innerShadow,
+					outline = props.outline,
+					dropShadow = props.dropShadow,
+					chromaticAberration = props.chromaticAberration,
+					outerGlow = props.outerGlow,
+				})
 
-			local img = AssetService:CreateEditableImage({ Size = Vector2.new(CANVAS, CANVAS) })
-			img:WritePixelsBuffer(Vector2.zero, Vector2.new(CANVAS, CANVAS), buf)
+				local img = AssetService:CreateEditableImage({ Size = Vector2.new(CANVAS, CANVAS) })
+				img:WritePixelsBuffer(Vector2.zero, Vector2.new(CANVAS, CANVAS), buf)
 
-			if imgRef.current then
-				imgRef.current:Destroy()
+				if imgRef.current then
+					imgRef.current:Destroy()
+				end
+				imgRef.current = img
+				setEditableImage(img)
+			end)
+			return function()
+				task.cancel(handle)
 			end
-			imgRef.current = img
-			setEditableImage(img)
 		end,
 		{
 			props.outline,

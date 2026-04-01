@@ -4,7 +4,7 @@ local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
 local ModalTitleBar = require(script.Parent.ModalTitleBar)
-local constants = require(script.Parent.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -25,7 +25,7 @@ local function ConfirmModal(props: Props)
 		onBackdropClick = function() end,
 	}, {
 		panel = e("Frame", {
-			Size = UDim2.fromOffset(constants.MODAL_DEFAULT_WIDTH, 126),
+			Size = UDim2.fromOffset(Constants.MODAL_DEFAULT_WIDTH, 126),
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainBackground),

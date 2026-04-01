@@ -1,5 +1,6 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
+local Types = require(script.Parent.Parent.Types)
 
 local Store = require(script.Parent.Parent.Store)
 local applyCamera = require(script.Parent.Parent.lib.applyCamera)
@@ -7,22 +8,13 @@ local getBoundsSnapshot = require(script.Parent.Parent.lib.viewportBounds)
 
 local e = React.createElement
 
-export type CameraParams = {
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	offsetX: number,
-	offsetY: number,
-	offsetZ: number,
-}
+export type CameraParams = Types.CameraParams
 
 export type ViewportRefs = {
 	viewportFrame: { current: ViewportFrame? },
 	camera: { current: Camera? },
 	clone: { current: Instance? },
-	bounds: { current: { cf: CFrame, size: Vector3 }? },
+	bounds: { current: Types.BoundsSnapshot? },
 }
 
 export type Props = {
@@ -36,7 +28,6 @@ export type Props = {
 	BorderSizePixel: number?,
 	ZIndex: number?,
 	children: { [string]: any }?,
-	-- Optional refs for parent access (e.g., for animation)
 	refs: ViewportRefs?,
 }
 
@@ -44,7 +35,7 @@ local function ModelViewport(props: Props)
 	local vpRef = React.useRef(nil :: ViewportFrame?)
 	local camRef = React.useRef(nil :: Camera?)
 	local cloneRef = React.useRef(nil :: Instance?)
-	local boundsRef = React.useRef(nil :: { cf: CFrame, size: Vector3 }?)
+	local boundsRef = React.useRef(nil :: Types.BoundsSnapshot?)
 
 	local camera = props.camera
 

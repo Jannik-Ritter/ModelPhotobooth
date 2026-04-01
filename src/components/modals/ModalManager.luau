@@ -1,6 +1,7 @@
 local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local Store = require(script.Parent.Parent.Parent.Store)
+local Types = require(script.Parent.Parent.Parent.Types)
 local ImagePreviewModal = require(script.Parent.ImagePreviewModal)
 local ColorPickerModal = require(script.Parent.ColorPickerModal)
 local NameInputModal = require(script.Parent.NameInputModal)
@@ -13,7 +14,7 @@ local colorPickerConfig = require(script.Parent.Parent.Parent.utils.colorPickerC
 
 local e = React.createElement
 
-type UploadResult = { name: string, assetId: number? }
+type UploadResult = Types.UploadResult
 
 type Props = {
 	state: Store.AppState,
@@ -27,7 +28,7 @@ type Props = {
 	uploadResults: { UploadResult }?,
 	deleteConfirmIndex: number?,
 	deleteConfirmName: string,
-	helpOpen: string | boolean,
+	helpOpen: string?,
 	hasPrevPreview: boolean,
 	hasNextPreview: boolean,
 	hideRerender: boolean,

@@ -39,6 +39,7 @@ type Props = {
 	onRender: () -> (),
 	onRenderAll: () -> (),
 	onExport: () -> (),
+	onExportSelected: () -> (),
 	onUploadAll: () -> (),
 	onHelp: () -> (),
 }
@@ -52,6 +53,7 @@ local function MainContent(props: Props)
 				onRender = props.onRender,
 				onRenderAll = props.onRenderAll,
 				onExport = props.onExport,
+				onExportSelected = props.onExportSelected,
 				onUploadAll = props.onUploadAll,
 				onHelp = props.onHelp,
 			}),

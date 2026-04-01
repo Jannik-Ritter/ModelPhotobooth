@@ -3,7 +3,7 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local ModalCloseButton = require(script.Parent.ModalCloseButton)
-local constants = require(script.Parent.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -21,7 +21,7 @@ local function ModalTitleBar(props: Props)
 	local textSize = props.textSize or 18
 
 	return e("Frame", {
-		Size = UDim2.new(1, 0, 0, constants.MODAL_TITLE_BAR_HEIGHT),
+		Size = UDim2.new(1, 0, 0, Constants.MODAL_TITLE_BAR_HEIGHT),
 		BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.Titlebar),
 		BorderSizePixel = 0,
 		LayoutOrder = props.layoutOrder,

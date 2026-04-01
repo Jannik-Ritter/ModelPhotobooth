@@ -2,7 +2,7 @@ local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local constants = require(script.Parent.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -17,7 +17,7 @@ local function ModalCloseButton(props: Props)
 		OnActivated = props.onActivated,
 		Icon = {
 			Image = "rbxassetid://129976509676301",
-			Size = constants.TOOLBAR_ICON_GLYPH,
+			Size = Constants.TOOLBAR_ICON_GLYPH,
 			UseThemeColor = true,
 		},
 		Size = props.size or UDim2.fromOffset(22, 22),

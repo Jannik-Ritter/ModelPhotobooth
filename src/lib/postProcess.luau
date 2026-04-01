@@ -1,4 +1,5 @@
 local postProcess = {}
+local Types = require(script.Parent.Parent.Types)
 
 function postProcess.applyOutline(buf: buffer, w: number, h: number, color: Color3, thickness: number): buffer
 	local cr = math.floor(color.R * 255 + 0.5)
@@ -68,39 +69,13 @@ function postProcess.blurAlphaFlat(src: buffer, w: number, h: number, radius: nu
 	return out
 end
 
-function postProcess.applyDropShadow(
-	buf: buffer,
-	w: number,
-	h: number,
-	color: Color3,
-	opacity: number,
-	dist: number,
-	blur: number,
-	angle: number?
-): buffer
-	local cr = color.R
-	local cg = color.G
-	local cb = color.B
-	local opF = opacity / 100
-	local rad = math.rad(angle or 45)
-	local offX = math.round(dist * math.cos(rad))
-	local offY = math.round(dist * math.sin(rad))
-	local sAlpha = buffer.create(w * h)
-	for y = 0, h - 1 do
-		for x = 0, w - 1 do
-			local sx, sy = x - offX, y - offY
-			if sx >= 0 and sx < w and sy >= 0 and sy < h then
-				buffer.writeu8(sAlpha, y * w + x, buffer.readu8(buf, (sy * w + sx) * 4 + 3))
-			end
-		end
-	end
-	if blur > 0 then
-		sAlpha = postProcess.blurAlphaFlat(sAlpha, w, h, math.max(1, blur))
-	end
+-- Composites `shadowAlpha` (a w*h single-channel buffer) beneath `buf`.
+-- Each shadow pixel is scaled by opF before blending. Color as 0-1 floats.
+local function compositeBelow(buf: buffer, w: number, h: number, shadowAlpha: buffer, cr: number, cg: number, cb: number, opF: number): buffer
 	local out = buffer.create(w * h * 4)
 	for i = 0, w * h - 1 do
 		local o = i * 4
-		local sa = math.floor(buffer.readu8(sAlpha, i) * opF + 0.5)
+		local sa = math.floor(buffer.readu8(shadowAlpha, i) * opF + 0.5)
 		local oa = buffer.readu8(buf, o + 3)
 		local or_ = buffer.readu8(buf, o)
 		local og = buffer.readu8(buf, o + 1)
@@ -135,6 +110,38 @@ function postProcess.applyDropShadow(
 		end
 	end
 	return out
+end
+
+function postProcess.applyDropShadow(
+	buf: buffer,
+	w: number,
+	h: number,
+	color: Color3,
+	opacity: number,
+	dist: number,
+	blur: number,
+	angle: number?
+): buffer
+	local cr = color.R
+	local cg = color.G
+	local cb = color.B
+	local opF = opacity / 100
+	local rad = math.rad(angle or 45)
+	local offX = math.round(dist * math.cos(rad))
+	local offY = math.round(dist * math.sin(rad))
+	local sAlpha = buffer.create(w * h)
+	for y = 0, h - 1 do
+		for x = 0, w - 1 do
+			local sx, sy = x - offX, y - offY
+			if sx >= 0 and sx < w and sy >= 0 and sy < h then
+				buffer.writeu8(sAlpha, y * w + x, buffer.readu8(buf, (sy * w + sx) * 4 + 3))
+			end
+		end
+	end
+	if blur > 0 then
+		sAlpha = postProcess.blurAlphaFlat(sAlpha, w, h, math.max(1, blur))
+	end
+	return compositeBelow(buf, w, h, sAlpha, cr, cg, cb, opF)
 end
 
 function postProcess.applyInnerShadow(
@@ -225,44 +232,7 @@ function postProcess.applyOuterGlow(
 		glowAlpha = postProcess.blurAlphaFlat(glowAlpha, w, h, math.max(1, blur))
 	end
 
-	local out = buffer.create(w * h * 4)
-	for i = 0, w * h - 1 do
-		local o = i * 4
-		local ga = math.floor(buffer.readu8(glowAlpha, i) * opF + 0.5)
-		local oa = buffer.readu8(buf, o + 3)
-		local or_ = buffer.readu8(buf, o)
-		local og = buffer.readu8(buf, o + 1)
-		local ob = buffer.readu8(buf, o + 2)
-		if oa >= 255 then
-			buffer.writeu8(out, o, or_)
-			buffer.writeu8(out, o + 1, og)
-			buffer.writeu8(out, o + 2, ob)
-			buffer.writeu8(out, o + 3, 255)
-		elseif ga == 0 then
-			buffer.writeu8(out, o, or_)
-			buffer.writeu8(out, o + 1, og)
-			buffer.writeu8(out, o + 2, ob)
-			buffer.writeu8(out, o + 3, oa)
-		else
-			local oaf = oa / 255
-			local saf = ga / 255
-			local finaf = oaf + saf * (1 - oaf)
-			local fina = math.floor(finaf * 255 + 0.5)
-			local finr, fing, finb
-			if finaf > 0 then
-				finr = math.floor(math.clamp((or_ / 255 * oaf + cr * saf * (1 - oaf)) / finaf * 255, 0, 255) + 0.5)
-				fing = math.floor(math.clamp((og / 255 * oaf + cg * saf * (1 - oaf)) / finaf * 255, 0, 255) + 0.5)
-				finb = math.floor(math.clamp((ob / 255 * oaf + cb * saf * (1 - oaf)) / finaf * 255, 0, 255) + 0.5)
-			else
-				finr, fing, finb = 0, 0, 0
-			end
-			buffer.writeu8(out, o, finr)
-			buffer.writeu8(out, o + 1, fing)
-			buffer.writeu8(out, o + 2, finb)
-			buffer.writeu8(out, o + 3, fina)
-		end
-	end
-	return out
+	return compositeBelow(buf, w, h, glowAlpha, cr, cg, cb, opF)
 end
 
 -- Chromatic aberration: R and G sampled along opposite directions from center (distance + angle, same convention as drop shadow).
@@ -299,42 +269,7 @@ end
 
 -- Order matches capture pipeline: inner shadow → outline → drop shadow → chromatic aberration → outer glow.
 -- Run on raw RGBA before background composite so alpha-dependent effects see the model boundary.
-export type ImageEffectsBundle = {
-	innerShadow: {
-		enabled: boolean,
-		color: Color3,
-		opacity: number,
-		distance: number,
-		blur: number,
-		angle: number,
-	},
-	outline: {
-		enabled: boolean,
-		color: Color3,
-		thickness: number,
-	},
-	dropShadow: {
-		enabled: boolean,
-		color: Color3,
-		opacity: number,
-		distance: number,
-		blur: number,
-		angle: number,
-	},
-	chromaticAberration: {
-		enabled: boolean,
-		distance: number,
-		opacity: number,
-		angle: number,
-	},
-	outerGlow: {
-		enabled: boolean,
-		color: Color3,
-		size: number,
-		opacity: number,
-		blur: number,
-	},
-}
+export type ImageEffectsBundle = Types.ImageEffectsBundle
 
 function postProcess.applyImageEffects(buf: buffer, w: number, h: number, fx: ImageEffectsBundle): buffer
 	local s = fx

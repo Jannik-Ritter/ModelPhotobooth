@@ -1,12 +1,11 @@
-export type BoundsSnapshot = {
-	cf: CFrame,
-	size: Vector3,
-}
+local Types = require(script.Parent.Parent.Types)
 
-local function getBoundsSnapshot(target: Instance): BoundsSnapshot
+export type BoundsSnapshot = Types.BoundsSnapshot
+
+local function getBoundsSnapshot(target: Instance): Types.BoundsSnapshot
 	local cf = CFrame.new()
 	local size = Vector3.new(4, 4, 4)
-	pcall(function()
+	local ok, err = pcall(function()
 		if target:IsA("Model") then
 			cf, size = target:GetBoundingBox()
 		else
@@ -14,6 +13,9 @@ local function getBoundsSnapshot(target: Instance): BoundsSnapshot
 			size = (target :: BasePart).Size
 		end
 	end)
+	if not ok then
+		warn("viewportBounds: failed to get bounds for", target, "-", err)
+	end
 	return {
 		cf = cf,
 		size = size,

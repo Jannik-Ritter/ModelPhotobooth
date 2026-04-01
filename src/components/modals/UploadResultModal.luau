@@ -1,17 +1,14 @@
 local Packages = script.Parent.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
+local Types = require(script.Parent.Parent.Parent.Types)
 
 local Darkener = require(script.Parent.Darkener)
 local ModalTitleBar = require(script.Parent.ModalTitleBar)
 
 local e = React.createElement
 
-export type UploadResult = {
-	name: string,
-	assetId: number?,
-	image: EditableImage?,
-}
+export type UploadResult = Types.UploadResult
 
 type Props = {
 	results: { UploadResult },

@@ -14,13 +14,13 @@ local OuterGlowEffectRow = require(script.Parent.effects.OuterGlowEffectRow)
 local ChromaticAberrationEffectRow = require(script.Parent.effects.ChromaticAberrationEffectRow)
 local SliderRow = require(script.Parent.effects.SliderRow)
 local limitDecimals = require(script.Parent.Parent.utils.limitDecimals)
-local constants = require(script.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Constants)
 
 local e = React.createElement
 
 local PRESET_ORDER = { "Front", "Side", "Back", "Top", "Iso", "Angled" }
 local EXPORT_DROPDOWN_LABELS: { string } = {}
-for _, opt in ipairs(constants.EXPORT_SIZE_PRESETS) do
+for _, opt in ipairs(Constants.EXPORT_SIZE_PRESETS) do
 	table.insert(EXPORT_DROPDOWN_LABELS, opt.label)
 end
 local BG_PRESETS = {
@@ -109,7 +109,7 @@ local function Sidebar(props: Props)
 
 	-- Export size selected label
 	local selectedSize = nil
-	for _, opt in ipairs(constants.EXPORT_SIZE_PRESETS) do
+	for _, opt in ipairs(Constants.EXPORT_SIZE_PRESETS) do
 		if state.exportSize == opt.value then
 			selectedSize = opt.label
 			break
@@ -206,7 +206,7 @@ local function Sidebar(props: Props)
 					SelectedItem = selectedSize,
 					OnItemSelected = function(lbl)
 						if lbl then
-							for _, opt in ipairs(constants.EXPORT_SIZE_PRESETS) do
+							for _, opt in ipairs(Constants.EXPORT_SIZE_PRESETS) do
 								if opt.label == lbl then
 									dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
 									break
@@ -264,8 +264,8 @@ local function Sidebar(props: Props)
 			fov = e(SliderRow, {
 				label = "FOV",
 				value = state.fov,
-				min = constants.FOV_MIN,
-				max = constants.FOV_MAX,
+				min = Constants.FOV_MIN,
+				max = Constants.FOV_MAX,
 				onChanged = function(v)
 					dispatch({ type = A.SET_FOV, value = v })
 				end,
@@ -277,8 +277,8 @@ local function Sidebar(props: Props)
 			distance = e(SliderRow, {
 				label = "Dist",
 				value = state.cameraDistance,
-				min = constants.CAMERA_DISTANCE_MIN,
-				max = constants.CAMERA_DISTANCE_MAX,
+				min = Constants.CAMERA_DISTANCE_MIN,
+				max = Constants.CAMERA_DISTANCE_MAX,
 				step = 0.01,
 				decimals = 2,
 				onChanged = function(v)
@@ -346,9 +346,9 @@ local function Sidebar(props: Props)
 								z = state.cameraOffsetZ,
 							})
 						end,
-						Min = constants.CAMERA_OFFSET_MIN,
-						Max = constants.CAMERA_OFFSET_MAX,
-						Step = constants.CAMERA_OFFSET_STEP,
+						Min = Constants.CAMERA_OFFSET_MIN,
+						Max = Constants.CAMERA_OFFSET_MAX,
+						Step = Constants.CAMERA_OFFSET_STEP,
 						Arrows = false,
 						Size = UDim2.new(1 / 3, -18, 1, 0),
 						LayoutOrder = 2,
@@ -371,9 +371,9 @@ local function Sidebar(props: Props)
 								z = state.cameraOffsetZ,
 							})
 						end,
-						Min = constants.CAMERA_OFFSET_MIN,
-						Max = constants.CAMERA_OFFSET_MAX,
-						Step = constants.CAMERA_OFFSET_STEP,
+						Min = Constants.CAMERA_OFFSET_MIN,
+						Max = Constants.CAMERA_OFFSET_MAX,
+						Step = Constants.CAMERA_OFFSET_STEP,
 						Arrows = false,
 						Size = UDim2.new(1 / 3, -18, 1, 0),
 						LayoutOrder = 4,
@@ -396,9 +396,9 @@ local function Sidebar(props: Props)
 								z = v,
 							})
 						end,
-						Min = constants.CAMERA_OFFSET_MIN,
-						Max = constants.CAMERA_OFFSET_MAX,
-						Step = constants.CAMERA_OFFSET_STEP,
+						Min = Constants.CAMERA_OFFSET_MIN,
+						Max = Constants.CAMERA_OFFSET_MAX,
+						Step = Constants.CAMERA_OFFSET_STEP,
 						Arrows = false,
 						Size = UDim2.new(1 / 3, -18, 1, 0),
 						LayoutOrder = 6,
@@ -536,9 +536,9 @@ local function Sidebar(props: Props)
 								},
 							})
 						end,
-						Min = constants.LIGHT_DIRECTION_MIN,
-						Max = constants.LIGHT_DIRECTION_MAX,
-						Step = constants.LIGHT_DIRECTION_STEP,
+						Min = Constants.LIGHT_DIRECTION_MIN,
+						Max = Constants.LIGHT_DIRECTION_MAX,
+						Step = Constants.LIGHT_DIRECTION_STEP,
 						Arrows = false,
 						Size = UDim2.new(1 / 3, -18, 1, 0),
 						LayoutOrder = 2,
@@ -562,9 +562,9 @@ local function Sidebar(props: Props)
 								},
 							})
 						end,
-						Min = constants.LIGHT_DIRECTION_MIN,
-						Max = constants.LIGHT_DIRECTION_MAX,
-						Step = constants.LIGHT_DIRECTION_STEP,
+						Min = Constants.LIGHT_DIRECTION_MIN,
+						Max = Constants.LIGHT_DIRECTION_MAX,
+						Step = Constants.LIGHT_DIRECTION_STEP,
 						Arrows = false,
 						Size = UDim2.new(1 / 3, -18, 1, 0),
 						LayoutOrder = 4,
@@ -588,9 +588,9 @@ local function Sidebar(props: Props)
 								},
 							})
 						end,
-						Min = constants.LIGHT_DIRECTION_MIN,
-						Max = constants.LIGHT_DIRECTION_MAX,
-						Step = constants.LIGHT_DIRECTION_STEP,
+						Min = Constants.LIGHT_DIRECTION_MIN,
+						Max = Constants.LIGHT_DIRECTION_MAX,
+						Step = Constants.LIGHT_DIRECTION_STEP,
 						Arrows = false,
 						Size = UDim2.new(1 / 3, -18, 1, 0),
 						LayoutOrder = 6,
@@ -844,7 +844,7 @@ local function Sidebar(props: Props)
 					dispatch({ type = A.SET_OUTER_GLOW, value = { blur = v } })
 				end,
 				onColorPickerToggle = function()
-					local target = if state.colorPickerTarget == "glow" then nil else "glow"
+					local target = if state.colorPickerTarget == "outerGlow" then nil else "outerGlow"
 					dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 				end,
 				LayoutOrder = 1,

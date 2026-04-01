@@ -2,16 +2,27 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local Selection = game:GetService("Selection")
 local Store = require(script.Parent.Parent.Store)
+local Types = require(script.Parent.Parent.Types)
 local exportAll = require(script.Parent.Parent.lib.exportAll)
 
-type ToastFn = (string, string) -> ()
+type ToastFn = Types.ToastFn
 
 return function(
 	state: Store.AppState,
 	addToast: ToastFn
 )
 	local function doExport()
-		local parts = exportAll(state.models)
+		local parts = exportAll.exportAll(state.models)
+		if #parts > 0 then
+			pcall(function()
+				Selection:Set(parts)
+			end)
+			addToast("normal", `Exported {#parts} model{if #parts == 1 then "" else "s"} to Workspace`)
+		end
+	end
+
+	local function doExportSelected()
+		local parts = exportAll.exportSelected(state.models, state.selectedModelIndices)
 		if #parts > 0 then
 			pcall(function()
 				Selection:Set(parts)
@@ -28,7 +39,7 @@ return function(
 			status = "ok" :: Store.RenderStatus,
 			isExported = false,
 		}
-		local parts = exportAll({ tempEntry })
+		local parts = exportAll.exportAll({ tempEntry })
 		if #parts > 0 then
 			pcall(function()
 				Selection:Set(parts)
@@ -38,6 +49,7 @@ return function(
 
 	return {
 		doExport = doExport,
+		doExportSelected = doExportSelected,
 		exportPreviewImage = exportPreviewImage,
 	}
 end

@@ -1,13 +1,8 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
+local Types = require(script.Parent.Parent.Types)
 
-type TrackballResult = {
-	onInputBegan: (rbx: GuiObject, input: InputObject) -> (),
-	onInputChanged: (rbx: GuiObject, input: InputObject) -> (),
-	onInputEnded: (rbx: GuiObject, input: InputObject) -> (),
-	onMouseLeave: () -> (),
-	isDragging: boolean,
-}
+type TrackballResult = Types.TrackballResult
 
 local function useTrackball(onDelta: (dx: number, dy: number) -> ()): TrackballResult
 	local draggingRef = React.useRef(false)

@@ -4,7 +4,7 @@ local StudioComponents = require(Packages.studiocomponents)
 
 local Darkener = require(script.Parent.Darkener)
 local ModalTitleBar = require(script.Parent.ModalTitleBar)
-local constants = require(script.Parent.Parent.Parent.constants)
+local Constants = require(script.Parent.Parent.Parent.Constants)
 
 local e = React.createElement
 
@@ -49,7 +49,7 @@ local function ImagePreviewModal(props: Props)
 			}),
 			image = e("ImageLabel", {
 				Size = UDim2.new(1, 0, 1, -68),
-				Position = UDim2.fromOffset(0, constants.MODAL_TITLE_BAR_HEIGHT),
+				Position = UDim2.fromOffset(0, Constants.MODAL_TITLE_BAR_HEIGHT),
 				BackgroundColor3 = theme:GetColor(Enum.StudioStyleGuideColor.InputFieldBackground),
 				BorderSizePixel = 0,
 				ImageContent = Content.fromObject(props.image),
@@ -59,7 +59,7 @@ local function ImagePreviewModal(props: Props)
 				then e(StudioComponents.Button, {
 					Icon = {
 						Image = "rbxassetid://93292117732993",
-						Size = constants.TOOLBAR_ICON_GLYPH,
+						Size = Constants.TOOLBAR_ICON_GLYPH,
 						UseThemeColor = true,
 					},
 					OnActivated = props.onPrev,
@@ -74,7 +74,7 @@ local function ImagePreviewModal(props: Props)
 				then e(StudioComponents.Button, {
 					Icon = {
 						Image = "rbxassetid://70823822486733",
-						Size = constants.TOOLBAR_ICON_GLYPH,
+						Size = Constants.TOOLBAR_ICON_GLYPH,
 						UseThemeColor = true,
 					},
 					OnActivated = props.onNext,
@@ -107,27 +107,29 @@ local function ImagePreviewModal(props: Props)
 				padding = e("UIPadding", {
 					PaddingRight = UDim.new(0, 8),
 				}),
-			rerender = if not props.hideRerender then e(StudioComponents.Button, {
-				Text = "Re-render",
-				OnActivated = props.onRerender,
-				Disabled = props.rendering,
-				Size = UDim2.fromOffset(80, 24),
-				LayoutOrder = 1,
-			}) else nil,
-			upload = e(StudioComponents.Button, {
-				Text = "Upload",
-				OnActivated = props.onUpload,
-				Disabled = props.rendering or props.uploading,
-				Size = UDim2.fromOffset(64, 24),
-				LayoutOrder = 2,
-			}),
-			exportThis = e(StudioComponents.MainButton, {
-				Text = "Export This",
-				OnActivated = props.onExport,
-				Disabled = props.rendering,
-				Size = UDim2.fromOffset(84, 24),
-				LayoutOrder = 3,
-			}),
+				rerender = if not props.hideRerender
+					then e(StudioComponents.Button, {
+						Text = "Re-render",
+						OnActivated = props.onRerender,
+						Disabled = props.rendering,
+						Size = UDim2.fromOffset(80, 24),
+						LayoutOrder = 1,
+					})
+					else nil,
+				upload = e(StudioComponents.Button, {
+					Text = "Upload",
+					OnActivated = props.onUpload,
+					Disabled = props.rendering or props.uploading,
+					Size = UDim2.fromOffset(64, 24),
+					LayoutOrder = 2,
+				}),
+				exportThis = e(StudioComponents.MainButton, {
+					Text = "Export This",
+					OnActivated = props.onExport,
+					Disabled = props.rendering,
+					Size = UDim2.fromOffset(84, 24),
+					LayoutOrder = 3,
+				}),
 			}),
 		}),
 	})

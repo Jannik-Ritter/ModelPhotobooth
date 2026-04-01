@@ -3,8 +3,9 @@ local React = require(Packages.react)
 local Selection = game:GetService("Selection")
 local CollectionService = game:GetService("CollectionService")
 local Store = require(script.Parent.Parent.Store)
+local Constants = require(script.Parent.Parent.Constants)
 
-local MPB_TAG = "_MPBIcon"
+local MPB_TAG = Constants.MPB_TAG
 
 return function(dispatch: (any) -> (), modelsRef: { current: { Store.ModelEntry } })
 	React.useEffect(function()

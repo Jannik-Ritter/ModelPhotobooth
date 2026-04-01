@@ -1,22 +1,10 @@
 local getCF = require(script.Parent.getCF)
+local Types = require(script.Parent.Parent.Types)
 
-export type CameraParams = {
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	offsetX: number,
-	offsetY: number,
-	offsetZ: number,
-}
+export type CameraParams = Types.CameraParams
+export type BoundsSnapshot = Types.BoundsSnapshot
 
-export type BoundsSnapshot = {
-	cf: CFrame,
-	size: Vector3,
-}
-
-local function toOffsetVector(params: CameraParams): Vector3
+local function toOffsetVector(params: Types.CameraParams): Vector3
 	return Vector3.new(params.offsetX, params.offsetY, params.offsetZ)
 end
 
@@ -25,8 +13,8 @@ end
 local function applyCamera(
 	camera: Camera,
 	target: Instance,
-	params: CameraParams,
-	bounds: BoundsSnapshot?
+	params: Types.CameraParams,
+	bounds: Types.BoundsSnapshot?
 )
 	camera.FieldOfView = math.max(params.fov, 1)
 	camera.CFrame = getCF(

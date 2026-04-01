@@ -1,15 +1,12 @@
 local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
+local Types = require(script.Parent.Parent.Types)
 
 local Toast = require(script.Parent.Toast)
 
 local e = React.createElement
 
-export type ToastEntry = {
-	id: number,
-	variant: string,
-	message: string,
-}
+export type ToastEntry = Types.ToastEntry
 
 type Props = {
 	toasts: { ToastEntry },

@@ -1,13 +1,10 @@
 -- Lookup table replacing the 60-line if/else chain for color picker modal config.
 local Store = require(script.Parent.Parent.Store)
+local Types = require(script.Parent.Parent.Types)
 
 local A = Store.ACTIONS
 
-type PickerConfig = {
-	title: string,
-	getColor: (Store.AppState) -> Color3,
-	makeAction: (Color3) -> { [string]: any },
-}
+type PickerConfig = Types.PickerConfig
 
 local CONFIG: { [string]: PickerConfig } = {
 	outline = {

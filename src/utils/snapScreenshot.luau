@@ -9,8 +9,8 @@ local DEFAULT_INTERVAL = 0.05
 
 type Promise<T> = typeof(Promise.new)
 
--- Captures a screenshot via CaptureService and converts it to an EditableImage.
--- Resolves with the EditableImage, or rejects after `timeout` seconds.
+-- Captures a screenshot via CaptureService and converts it to an EditableImage
+-- Resolves with the EditableImage, or rejects after 'timeout' seconds
 return function(timeout: number?, interval: number?): Promise<EditableImage>
 	local timeLimit = timeout or DEFAULT_TIMEOUT
 	local step = interval or DEFAULT_INTERVAL

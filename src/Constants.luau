@@ -1,5 +1,17 @@
 -- Shared layout tokens, camera limits, and export/capture sizing for the plugin.
 return {
+	-- CollectionService tag applied to all exported MeshPart icons
+	MPB_TAG = "_MPBIcon",
+
+	-- Default lighting preset (used by Store.DEFAULT_STATE and preset deserialization)
+	DEFAULT_LIGHTING = {
+		lightColor = Color3.new(1, 1, 1),
+		ambient = Color3.fromRGB(160, 160, 160),
+		lightDirectionX = -1,
+		lightDirectionY = -2,
+		lightDirectionZ = -1,
+	},
+
 	-- UI chrome (modals, toolbar, icons)
 	MODAL_TITLE_BAR_HEIGHT = 32,
 	MODAL_DEFAULT_WIDTH = 360,

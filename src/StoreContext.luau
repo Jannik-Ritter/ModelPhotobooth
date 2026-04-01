@@ -1,11 +1,8 @@
 local Packages = script.Parent.Parent.Packages
 local React = require(Packages.react)
-local Store = require(script.Parent.Store)
+local Types = require(script.Parent.Types)
 
-export type StoreContextValue = {
-	state: Store.AppState,
-	dispatch: (any) -> (),
-}
+export type StoreContextValue = Types.StoreContextValue
 
 local context = React.createContext(nil :: StoreContextValue?)
 

@@ -23,6 +23,7 @@ local function getCF(
 	end
 	cf = cf or CFrame.new()
 	sz = sz or Vector3.new(4, 4, 4)
+	-- 1.18 adds ~18% padding so the model isn't cropped at the exact viewport edge.
 	local d = (sz.Magnitude / 2 / math.tan(math.rad(math.max(fov, 0.5) / 2))) * 1.18 * (distanceMultiplier or 1)
 	local rot = CFrame.fromEulerAnglesYXZ(0, math.rad(yaw), 0) * CFrame.fromEulerAnglesYXZ(math.rad(-pitch), 0, 0)
 	local targetPos = cf.Position + (offset or Vector3.zero)

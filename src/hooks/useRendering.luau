@@ -1,10 +1,9 @@
-local Packages = script.Parent.Parent.Parent.Packages
-local React = require(Packages.react)
 local Store = require(script.Parent.Parent.Store)
+local Types = require(script.Parent.Parent.Types)
 local renderOne = require(script.Parent.Parent.lib.renderOne)
 local buildRenderSettings = require(script.Parent.Parent.utils.buildRenderSettings)
 
-type ToastFn = (string, string) -> ()
+type ToastFn = Types.ToastFn
 
 local function runRenderBatch(
 	targets: { { index: number, entry: Store.ModelEntry } },
@@ -74,35 +73,37 @@ return function(
 	animationPlayingRef: { current: boolean },
 	addToast: ToastFn
 )
-	local function startRenderSelected()
+	-- Builds a targets list and starts a render batch.
+	-- When `indices` is provided only those model indices are rendered; otherwise all non-exported models are rendered.
+	local function startRender(indices: { number }?)
 		if renderingRef.current then return end
 		local targets = {}
-		for _, idx in ipairs(state.selectedModelIndices) do
-			local entry = state.models[idx]
-			if entry and not entry.isExported then
-				table.insert(targets, { index = idx, entry = entry })
+		if indices then
+			for _, idx in ipairs(indices) do
+				local entry = state.models[idx]
+				if entry and not entry.isExported then
+					table.insert(targets, { index = idx, entry = entry })
+				end
+			end
+		else
+			for i, entry in ipairs(state.models) do
+				if not entry.isExported then
+					table.insert(targets, { index = i, entry = entry })
+				end
 			end
 		end
 		if #targets == 0 then return end
-
 		renderingRef.current = true
 		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
 		runRenderBatch(targets, dispatch, buildRenderSettings(state), addToast, animationPlayingRef, renderingRef)
 	end
 
-	local function startRenderAll()
-		if renderingRef.current then return end
-		local targets = {}
-		for i, entry in ipairs(state.models) do
-			if not entry.isExported then
-				table.insert(targets, { index = i, entry = entry })
-			end
-		end
-		if #targets == 0 then return end
+	local function startRenderSelected()
+		startRender(state.selectedModelIndices)
+	end
 
-		renderingRef.current = true
-		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
-		runRenderBatch(targets, dispatch, buildRenderSettings(state), addToast, animationPlayingRef, renderingRef)
+	local function startRenderAll()
+		startRender()
 	end
 
 	local function rerenderPreview()
