@@ -8,6 +8,7 @@ local applyCamera = require(script.Parent.Parent.lib.applyCamera)
 local Store = require(script.Parent.Parent.Store)
 local StoreContext = require(script.Parent.Parent.StoreContext)
 local useTrackball = require(script.Parent.Parent.hooks.useTrackball)
+local waitForAnimationTrackLength = require(script.Parent.Parent.utils.waitForAnimationTrackLength)
 local constants = require(script.Parent.Parent.constants)
 local AnimationPanel = require(script.Parent.AnimationPanel)
 local ModelViewport = require(script.Parent.ModelViewport)
@@ -246,22 +247,32 @@ local function PreviewViewport(props: Props)
 		trackRef.current = track
 
 		-- Wait for animation to load before applying pose (StepAnimations needs loaded data)
-		task.spawn(function()
-			local attempts = 0
-			while track.Length == 0 and attempts < 100 do
-				task.wait(0.05)
-				attempts += 1
-			end
-			if trackRef.current == track and track.Length > 0 then
+		local lengthPromise = waitForAnimationTrackLength(track)
+		lengthPromise
+			:andThen(function()
+				if trackRef.current ~= track then
+					return
+				end
 				dispatch({ type = Store.ACTIONS.SET_ANIMATION_LENGTH, value = track.Length })
-				-- Apply pose now that animation is loaded
-				applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
+				-- Only apply frozen pose when paused; when playing the Heartbeat effect handles playback
+				if not state.animationPlaying then
+					applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
+				else
+					track.TimePosition = state.animationTimePosition
+				end
 				-- Re-apply camera after pose changes so the preview updates immediately
 				if camRef.current and cloneRef.current then
-					applyCamera(camRef.current, cloneRef.current, toCameraStateParams(cameraStateRef.current), boundsRef.current)
+					applyCamera(
+						camRef.current,
+						cloneRef.current,
+						toCameraStateParams(cameraStateRef.current),
+						boundsRef.current
+					)
 				end
-			end
-		end)
+			end)
+			:catch(function(error)
+				print(error)
+			end)
 
 		return function()
 			if trackRef.current == track then

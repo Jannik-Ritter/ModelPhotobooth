@@ -1,6 +1,5 @@
 local CoreGui = game:GetService("CoreGui")
 local AssetService = game:GetService("AssetService")
-local CaptureService = game:GetService("CaptureService")
 
 local Packages = script.Parent.Parent.Parent.Packages
 local Promise = require(Packages.promise)
@@ -9,6 +8,8 @@ local applyCamera = require(script.Parent.applyCamera)
 local getBoundsSnapshot = require(script.Parent.viewportBounds)
 local getRenderScale = require(script.Parent.getRenderScale)
 local postProcess = require(script.Parent.postProcess)
+local waitForAnimationTrackLength = require(script.Parent.Parent.utils.waitForAnimationTrackLength)
+local snapScreenshot = require(script.Parent.Parent.utils.snapScreenshot)
 local constants = require(script.Parent.Parent.constants)
 
 type RenderSettings = {
@@ -25,7 +26,13 @@ type RenderSettings = {
 	innerShadow: { enabled: boolean, color: Color3, opacity: number, distance: number, blur: number, angle: number },
 	outerGlow: { enabled: boolean, color: Color3, size: number, opacity: number, blur: number },
 	chromaticAberration: { enabled: boolean, distance: number, opacity: number, angle: number },
-	lighting: { lightColor: Color3, ambient: Color3, lightDirectionX: number, lightDirectionY: number, lightDirectionZ: number },
+	lighting: {
+		lightColor: Color3,
+		ambient: Color3,
+		lightDirectionX: number,
+		lightDirectionY: number,
+		lightDirectionZ: number,
+	},
 	bgMode: string,
 	bgColor: Color3,
 	exportSize: number,
@@ -78,82 +85,83 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		tmpVP.Position = UDim2.new(0.5, -CAPSIZE / 2, 0.5, -CAPSIZE / 2)
 		tmpVP.BorderSizePixel = 0
 		tmpVP.Ambient = settings.lighting.ambient
-		tmpVP.LightDirection = Vector3.new(settings.lighting.lightDirectionX, settings.lighting.lightDirectionY, settings.lighting.lightDirectionZ)
+		tmpVP.LightDirection = Vector3.new(
+			settings.lighting.lightDirectionX,
+			settings.lighting.lightDirectionY,
+			settings.lighting.lightDirectionZ
+		)
 		tmpVP.LightColor = settings.lighting.lightColor
 		tmpVP.Parent = tmpGui
 
 		local tmpCam = Instance.new("Camera")
 		tmpCam.Parent = tmpVP
 		tmpVP.CurrentCamera = tmpCam
-	local tmpClone
-	local ok = pcall(function()
-		tmpClone = model:Clone()
-		tmpClone.Parent = tmpVP
-	end)
-	if not ok or not tmpClone then
-		tmpGui:Destroy()
-		reject("failed to clone model")
-		return
-	end
-
-	-- Bounds snapshot at rest pose to match PreviewViewport (bounds are computed at clone time
-	-- before animation is set up, so camera distance is consistent between preview and render).
-	local bounds = getBoundsSnapshot(tmpClone)
-
-	-- Pose animation if specified (requires WorldModel + manual StepAnimations)
-	if settings.animationId and settings.animationId ~= "" then
-		local wm = Instance.new("WorldModel")
-		wm.Parent = tmpVP
-		tmpClone.Parent = wm
-
-		local animator
-		local humanoid = tmpClone:FindFirstChildWhichIsA("Humanoid")
-		local animController = tmpClone:FindFirstChildWhichIsA("AnimationController")
-		if humanoid then
-			animator = humanoid:FindFirstChildWhichIsA("Animator")
-			if not animator then
-				animator = Instance.new("Animator")
-				animator.Parent = humanoid
-			end
-		else
-			if not animController then
-				animController = Instance.new("AnimationController")
-				animController.Parent = tmpClone
-			end
-			animator = animController:FindFirstChildWhichIsA("Animator")
-			if not animator then
-				animator = Instance.new("Animator")
-				animator.Parent = animController
-			end
-		end
-
-		local animObj = Instance.new("Animation")
-		animObj.AnimationId = settings.animationId
-		local track
-		local loadOk = pcall(function()
-			track = animator:LoadAnimation(animObj)
+		local tmpClone
+		local ok = pcall(function()
+			tmpClone = model:Clone()
+			tmpClone.Parent = tmpVP
 		end)
-		animObj:Destroy()
-		if loadOk and track then
-			-- Match PreviewViewport animation setup so posed bounds (and camera fit via getCF)
-			-- are consistent between live preview and export renders.
-			track.Priority = Enum.AnimationPriority.Action4
-			track.Looped = true
-			track:Play(0)
-			local attempts = 0
-			while track.Length == 0 and attempts < ANIMATION_LOAD_MAX_ATTEMPTS do
-				task.wait(INTERVAL)
-				attempts += 1
-			end
-			if track.Length > 0 then
-				-- Step multiple times to fully resolve the pose (blend weights, IK, etc.)
-				for _ = 1, POSE_STEP_COUNT do
-					applyAnimationPoseAtTime(animator, track, settings.animationTimePosition or 0)
+		if not ok or not tmpClone then
+			tmpGui:Destroy()
+			reject("failed to clone model")
+			return
+		end
+
+		-- Bounds snapshot at rest pose to match PreviewViewport (bounds are computed at clone time
+		-- before animation is set up, so camera distance is consistent between preview and render).
+		local bounds = getBoundsSnapshot(tmpClone)
+
+		-- Pose animation if specified (requires WorldModel + manual StepAnimations)
+		if settings.animationId and settings.animationId ~= "" then
+			local wm = Instance.new("WorldModel")
+			wm.Parent = tmpVP
+			tmpClone.Parent = wm
+
+			local animator
+			local humanoid = tmpClone:FindFirstChildWhichIsA("Humanoid")
+			local animController = tmpClone:FindFirstChildWhichIsA("AnimationController")
+			if humanoid then
+				animator = humanoid:FindFirstChildWhichIsA("Animator")
+				if not animator then
+					animator = Instance.new("Animator")
+					animator.Parent = humanoid
 				end
-				task.wait(INTERVAL) -- let the pose settle
+			else
+				if not animController then
+					animController = Instance.new("AnimationController")
+					animController.Parent = tmpClone
+				end
+				animator = animController:FindFirstChildWhichIsA("Animator")
+				if not animator then
+					animator = Instance.new("Animator")
+					animator.Parent = animController
+				end
+			end
+
+			local animObj = Instance.new("Animation")
+			animObj.AnimationId = settings.animationId
+			local track
+			local loadOk = pcall(function()
+				track = animator:LoadAnimation(animObj)
+			end)
+			animObj:Destroy()
+			if loadOk and track then
+				-- Match PreviewViewport animation setup so posed bounds (and camera fit via getCF)
+				-- are consistent between live preview and export renders.
+				track.Priority = Enum.AnimationPriority.Action4
+				track.Looped = true
+				track:Play(0)
+
+				local okLength = waitForAnimationTrackLength(track, ANIMATION_LOAD_MAX_ATTEMPTS):await()
+				if okLength then
+					-- Step multiple times to fully resolve the pose (blend weights, IK, etc.)
+					for _ = 1, POSE_STEP_COUNT do
+						applyAnimationPoseAtTime(animator, track, settings.animationTimePosition or 0)
+					end
+					task.wait(INTERVAL) -- let the pose settle
+				end
 			end
 		end
-	end
 
 		applyCamera(tmpCam, tmpClone, {
 			yaw = settings.yaw,
@@ -173,42 +181,24 @@ local function renderOne(model: Instance, settings: RenderSettings)
 		local cropSz =
 			Vector2.new(math.min(math.floor(CAPSIZE * scale.X), maxPx), math.min(math.floor(CAPSIZE * scale.Y), maxPx))
 
-		local function snap(bg: Color3)
-			return Promise.new(function(res, rej)
-				bgFr.BackgroundColor3 = bg
-				tmpVP.BackgroundColor3 = bg
+		local function snap(bg: Color3): (boolean, EditableImage?)
+			bgFr.BackgroundColor3 = bg
+			tmpVP.BackgroundColor3 = bg
 
-				task.wait(SNAP_TIMEOUT)
+			task.wait(SNAP_TIMEOUT)
 
-				local done, ei = false, nil :: EditableImage?
-				CaptureService:CaptureScreenshot(function(content)
-					local ok2, img = pcall(function()
-						return AssetService:CreateEditableImageAsync(content)
-					end)
-					ei = ok2 and img or nil
-					done = true
-				end)
-				local t = tick()
-				while not done and tick() - t < 6 do
-					task.wait(0.05)
-				end
-				if ei then
-					res(ei)
-				else
-					rej("screenshot failed")
-				end
-			end)
+			return snapScreenshot(1, 0.05):await()
 		end
 
 		local white, black
 		local snapOk, snapErr = pcall(function()
-			local ok1, w = snap(Color3.new(1, 1, 1)):await()
-			if not ok1 then
+			local okW, w = snap(Color3.new(1, 1, 1))
+			if not okW then
 				error(w)
 			end
 			white = w
-			local ok2, b = snap(Color3.new(0, 0, 0)):await()
-			if not ok2 then
+			local okB, b = snap(Color3.new(0, 0, 0))
+			if not okB then
 				error(b)
 			end
 			black = b
