@@ -101,11 +101,25 @@ local function HelpShortcutsModal(props: Props)
 		PaddingTop = UDim.new(0, 8),
 		PaddingBottom = UDim.new(0, 8),
 	}, {
+		warning = e("TextLabel", {
+			Text = "<font color='#FF7800'>Disclaimer: Uploading is currently restricted by Roblox. See Common Issues - 'Upload failed' for more information. Explorting is not affected.</font>",
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			BackgroundTransparency = 1,
+			TextColor3 = theme:GetColor(Enum.StudioStyleGuideColor.MainText),
+			TextSize = CONTENT_TEXT_SIZE,
+			Font = Enum.Font.SourceSans,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			TextWrapped = true,
+			LayoutOrder = 1,
+			RichText = true,
+		}),
 		usageHeader = sectionHeader(theme, "Usage", 1),
 		usageBody = e("TextLabel", {
 			Text = "Select a model or part in the Explorer to add it to the Models strip.\n"
 				.. "The right panel contains camera, effects, animation, and export settings. Save your favorites as presets.\n"
-				.. "Click Preview to render, then Export to place the result in Workspace, or Upload to save directly to Roblox.\n"
+				.. "Click Preview to render, then Export to place the result in Workspace.\n"
 				.. "Click any render in the Renders strip to view it before exporting.\n"
 				.. 'To save as a PNG, export first, then right-click the result and choose "Save/Export" -> "Export as Obj".\n'
 				.. "To render with animation, place a compatible Animation instance inside the model.",
@@ -119,6 +133,7 @@ local function HelpShortcutsModal(props: Props)
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextWrapped = true,
 			LayoutOrder = 2,
+			RichText = true,
 		}),
 		spacerGuide = spacer(3),
 		kbHeader = sectionHeader(theme, "Keyboard", 4),
@@ -159,7 +174,7 @@ local function HelpShortcutsModal(props: Props)
 		PaddingTop = UDim.new(0, 8),
 		PaddingBottom = UDim.new(0, 8),
 	}, {
-		viewportHeader = sectionHeader(theme, "Viewport too small", 1),
+		viewportHeader = sectionHeader(theme, "Viewport too small", 4),
 		viewportBody = bodyText(
 			theme,
 			"Make the Roblox viewport (the space where you move your camera) in Studio as big as possible. "
@@ -168,12 +183,16 @@ local function HelpShortcutsModal(props: Props)
 				.. "px tall and wide to support the highest settings. "
 				.. "If that doesn't work, your monitor might be too small. In that case, change the resolution plugin-setting to be smaller."
 				.. "Or alternatively, enable device emulation in Studio settings.",
-			2
+			4
 		),
-		spacer1 = spacer(3),
-		uploadHeader = sectionHeader(theme, "Upload failed", 4),
-		uploadBody = bodyText(theme, "Enable the CreateAssetAsync Lua API Beta in Studio settings and restart.", 5),
-		spacerContact = spacer(6),
+		spacer1 = spacer(5),
+		uploadHeader = sectionHeader(theme, "Upload failed", 6),
+		uploadBody = bodyText(
+			theme,
+			"Uploading only works if you installed this plugin locally and enabled the CreateAssetAsync Lua API Beta in Studio settings. If you installed the plugin from the Creatore Store, you will unfotunately have to wait until Roblox releases this API endpoint.\nIn the mean time, exporting works just fine too, you just have to upload the PNG files to Roblox yourself. ",
+			7
+		),
+		spacerContact = spacer(8),
 		contactBody = e("TextLabel", {
 			Text = "Didn't find your issue? Message me @Chahier",
 			Size = UDim2.new(1, 0, 0, 18),
@@ -183,7 +202,7 @@ local function HelpShortcutsModal(props: Props)
 			Font = Enum.Font.SourceSans,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
-			LayoutOrder = 7,
+			LayoutOrder = 9,
 		}),
 	})
 
