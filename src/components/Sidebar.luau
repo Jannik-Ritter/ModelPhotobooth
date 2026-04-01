@@ -5,6 +5,7 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local Store = require(script.Parent.Parent.Store)
+local StoreContext = require(script.Parent.Parent.StoreContext)
 local CollapsibleSection = require(script.Parent.effects.CollapsibleSection)
 local EffectPreview = require(script.Parent.effects.EffectPreview)
 local OutlineEffectRow = require(script.Parent.effects.OutlineEffectRow)
@@ -37,8 +38,6 @@ local DROPDOWN_LABEL_WIDTHS = {
 }
 
 type Props = {
-	state: Store.AppState,
-	dispatch: (any) -> (),
 	onSavePreset: () -> (),
 	onApplyPreset: (index: number) -> (),
 	onRenamePreset: (index: number) -> (),
@@ -46,7 +45,9 @@ type Props = {
 }
 
 local function Sidebar(props: Props)
-	local state = props.state
+	local store = StoreContext.useStore()
+	local state = store.state
+	local dispatch = store.dispatch
 	local A = Store.ACTIONS
 	local theme = StudioComponents.useTheme()
 	local selectedTab, setSelectedTab = React.useState("Settings")
@@ -61,7 +62,7 @@ local function Sidebar(props: Props)
 
 	local function toggleSection(section: string)
 		return function()
-			props.dispatch({ type = A.TOGGLE_SECTION, value = section })
+			dispatch({ type = A.TOGGLE_SECTION, value = section })
 		end
 	end
 
@@ -207,7 +208,7 @@ local function Sidebar(props: Props)
 						if lbl then
 							for _, opt in ipairs(constants.EXPORT_SIZE_PRESETS) do
 								if opt.label == lbl then
-									props.dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
+									dispatch({ type = A.SET_EXPORT_SIZE, value = opt.value })
 									break
 								end
 							end
@@ -245,7 +246,7 @@ local function Sidebar(props: Props)
 					OnItemSelected = function(name)
 						if name then
 							local preset = Store.PRESETS[name]
-							props.dispatch({
+							dispatch({
 								type = A.SET_CAMERA,
 								yaw = preset.yaw,
 								pitch = preset.pitch,
@@ -266,7 +267,7 @@ local function Sidebar(props: Props)
 				min = constants.FOV_MIN,
 				max = constants.FOV_MAX,
 				onChanged = function(v)
-					props.dispatch({ type = A.SET_FOV, value = v })
+					dispatch({ type = A.SET_FOV, value = v })
 				end,
 				layoutOrder = 2,
 				suffix = "\u{00B0}",
@@ -281,7 +282,7 @@ local function Sidebar(props: Props)
 				step = 0.01,
 				decimals = 2,
 				onChanged = function(v)
-					props.dispatch({ type = A.SET_CAMERA_DISTANCE, value = v })
+					dispatch({ type = A.SET_CAMERA_DISTANCE, value = v })
 				end,
 				layoutOrder = 3,
 				suffix = "x",
@@ -294,7 +295,7 @@ local function Sidebar(props: Props)
 				min = -180,
 				max = 180,
 				onChanged = function(v)
-					props.dispatch({ type = A.SET_ROLL, value = v })
+					dispatch({ type = A.SET_ROLL, value = v })
 				end,
 				layoutOrder = 4,
 				suffix = "\u{00B0}",
@@ -338,7 +339,7 @@ local function Sidebar(props: Props)
 						FormatValue = formatCameraOffset,
 						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
-							props.dispatch({
+							dispatch({
 								type = A.SET_CAMERA_OFFSET,
 								x = v,
 								y = state.cameraOffsetY,
@@ -363,7 +364,7 @@ local function Sidebar(props: Props)
 						FormatValue = formatCameraOffset,
 						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
-							props.dispatch({
+							dispatch({
 								type = A.SET_CAMERA_OFFSET,
 								x = state.cameraOffsetX,
 								y = v,
@@ -388,7 +389,7 @@ local function Sidebar(props: Props)
 						FormatValue = formatCameraOffset,
 						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
-							props.dispatch({
+							dispatch({
 								type = A.SET_CAMERA_OFFSET,
 								x = state.cameraOffsetX,
 								y = state.cameraOffsetY,
@@ -444,7 +445,7 @@ local function Sidebar(props: Props)
 					LayoutOrder = 2,
 					[React.Event.MouseButton1Click] = function()
 						local target = if state.colorPickerTarget == "lightColor" then nil else "lightColor"
-						props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+						dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 					end,
 				}, {
 					corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
@@ -480,7 +481,7 @@ local function Sidebar(props: Props)
 					LayoutOrder = 2,
 					[React.Event.MouseButton1Click] = function()
 						local target = if state.colorPickerTarget == "ambient" then nil else "ambient"
-						props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+						dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 					end,
 				}, {
 					corner = e("UICorner", { CornerRadius = UDim.new(0, 3) }),
@@ -526,7 +527,7 @@ local function Sidebar(props: Props)
 						Value = state.lighting.lightDirectionX,
 						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
-							props.dispatch({
+							dispatch({
 								type = A.SET_LIGHTING,
 								value = {
 									lightDirectionX = v,
@@ -552,7 +553,7 @@ local function Sidebar(props: Props)
 						Value = state.lighting.lightDirectionY,
 						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
-							props.dispatch({
+							dispatch({
 								type = A.SET_LIGHTING,
 								value = {
 									lightDirectionX = state.lighting.lightDirectionX,
@@ -578,7 +579,7 @@ local function Sidebar(props: Props)
 						Value = state.lighting.lightDirectionZ,
 						ClearTextOnFocus = false,
 						OnValidChanged = function(v)
-							props.dispatch({
+							dispatch({
 								type = A.SET_LIGHTING,
 								value = {
 									lightDirectionX = state.lighting.lightDirectionX,
@@ -601,7 +602,7 @@ local function Sidebar(props: Props)
 				Size = UDim2.new(1, 0, 0, 24),
 				LayoutOrder = 4,
 				OnActivated = function()
-					props.dispatch({ type = A.SET_LIGHTING, value = {
+					dispatch({ type = A.SET_LIGHTING, value = {
 						ambient = Lighting.Ambient,
 					} })
 				end,
@@ -634,9 +635,9 @@ local function Sidebar(props: Props)
 						if lbl then
 							for _, preset in ipairs(BG_PRESETS) do
 								if preset.label == lbl then
-									props.dispatch({ type = A.SET_BG_MODE, value = preset.mode })
+									dispatch({ type = A.SET_BG_MODE, value = preset.mode })
 									if preset.color then
-										props.dispatch({ type = A.SET_BG_COLOR, value = preset.color })
+										dispatch({ type = A.SET_BG_COLOR, value = preset.color })
 									end
 									break
 								end
@@ -671,7 +672,7 @@ local function Sidebar(props: Props)
 						LayoutOrder = 2,
 						[React.Event.MouseButton1Click] = function()
 							local target = if state.colorPickerTarget == "background" then nil else "background"
-							props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+							dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 						end,
 					}, {
 						aspectRatioConstraint = e("UIAspectRatioConstraint", { AspectRatio = 1 }),
@@ -716,17 +717,17 @@ local function Sidebar(props: Props)
 				color = state.outline.color,
 				thickness = state.outline.thickness,
 				onToggle = function(v)
-					props.dispatch({ type = A.SET_OUTLINE, value = { enabled = v } })
+					dispatch({ type = A.SET_OUTLINE, value = { enabled = v } })
 				end,
 				onColorChanged = function(c)
-					props.dispatch({ type = A.SET_OUTLINE, value = { color = c } })
+					dispatch({ type = A.SET_OUTLINE, value = { color = c } })
 				end,
 				onThicknessChanged = function(v)
-					props.dispatch({ type = A.SET_OUTLINE, value = { thickness = v } })
+					dispatch({ type = A.SET_OUTLINE, value = { thickness = v } })
 				end,
 				onColorPickerToggle = function()
 					local target = if state.colorPickerTarget == "outline" then nil else "outline"
-					props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+					dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 				end,
 				LayoutOrder = 1,
 			}),
@@ -748,26 +749,26 @@ local function Sidebar(props: Props)
 				blur = state.dropShadow.blur,
 				angle = state.dropShadow.angle,
 				onToggle = function(v)
-					props.dispatch({ type = A.SET_DROP_SHADOW, value = { enabled = v } })
+					dispatch({ type = A.SET_DROP_SHADOW, value = { enabled = v } })
 				end,
 				onColorChanged = function(c)
-					props.dispatch({ type = A.SET_DROP_SHADOW, value = { color = c } })
+					dispatch({ type = A.SET_DROP_SHADOW, value = { color = c } })
 				end,
 				onOpacityChanged = function(v)
-					props.dispatch({ type = A.SET_DROP_SHADOW, value = { opacity = v } })
+					dispatch({ type = A.SET_DROP_SHADOW, value = { opacity = v } })
 				end,
 				onDistanceChanged = function(v)
-					props.dispatch({ type = A.SET_DROP_SHADOW, value = { distance = v } })
+					dispatch({ type = A.SET_DROP_SHADOW, value = { distance = v } })
 				end,
 				onBlurChanged = function(v)
-					props.dispatch({ type = A.SET_DROP_SHADOW, value = { blur = v } })
+					dispatch({ type = A.SET_DROP_SHADOW, value = { blur = v } })
 				end,
 				onAngleChanged = function(v)
-					props.dispatch({ type = A.SET_DROP_SHADOW, value = { angle = v } })
+					dispatch({ type = A.SET_DROP_SHADOW, value = { angle = v } })
 				end,
 				onColorPickerToggle = function()
 					local target = if state.colorPickerTarget == "shadow" then nil else "shadow"
-					props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+					dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 				end,
 				LayoutOrder = 1,
 			}),
@@ -789,26 +790,26 @@ local function Sidebar(props: Props)
 				blur = state.innerShadow.blur,
 				angle = state.innerShadow.angle,
 				onToggle = function(v)
-					props.dispatch({ type = A.SET_INNER_SHADOW, value = { enabled = v } })
+					dispatch({ type = A.SET_INNER_SHADOW, value = { enabled = v } })
 				end,
 				onColorChanged = function(c)
-					props.dispatch({ type = A.SET_INNER_SHADOW, value = { color = c } })
+					dispatch({ type = A.SET_INNER_SHADOW, value = { color = c } })
 				end,
 				onOpacityChanged = function(v)
-					props.dispatch({ type = A.SET_INNER_SHADOW, value = { opacity = v } })
+					dispatch({ type = A.SET_INNER_SHADOW, value = { opacity = v } })
 				end,
 				onDistanceChanged = function(v)
-					props.dispatch({ type = A.SET_INNER_SHADOW, value = { distance = v } })
+					dispatch({ type = A.SET_INNER_SHADOW, value = { distance = v } })
 				end,
 				onBlurChanged = function(v)
-					props.dispatch({ type = A.SET_INNER_SHADOW, value = { blur = v } })
+					dispatch({ type = A.SET_INNER_SHADOW, value = { blur = v } })
 				end,
 				onAngleChanged = function(v)
-					props.dispatch({ type = A.SET_INNER_SHADOW, value = { angle = v } })
+					dispatch({ type = A.SET_INNER_SHADOW, value = { angle = v } })
 				end,
 				onColorPickerToggle = function()
 					local target = if state.colorPickerTarget == "inner" then nil else "inner"
-					props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+					dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 				end,
 				LayoutOrder = 1,
 			}),
@@ -828,23 +829,23 @@ local function Sidebar(props: Props)
 				opacity = state.outerGlow.opacity,
 				blur = state.outerGlow.blur,
 				onToggle = function(v)
-					props.dispatch({ type = A.SET_OUTER_GLOW, value = { enabled = v } })
+					dispatch({ type = A.SET_OUTER_GLOW, value = { enabled = v } })
 				end,
 				onColorChanged = function(c)
-					props.dispatch({ type = A.SET_OUTER_GLOW, value = { color = c } })
+					dispatch({ type = A.SET_OUTER_GLOW, value = { color = c } })
 				end,
 				onSizeChanged = function(v)
-					props.dispatch({ type = A.SET_OUTER_GLOW, value = { size = v } })
+					dispatch({ type = A.SET_OUTER_GLOW, value = { size = v } })
 				end,
 				onOpacityChanged = function(v)
-					props.dispatch({ type = A.SET_OUTER_GLOW, value = { opacity = v } })
+					dispatch({ type = A.SET_OUTER_GLOW, value = { opacity = v } })
 				end,
 				onBlurChanged = function(v)
-					props.dispatch({ type = A.SET_OUTER_GLOW, value = { blur = v } })
+					dispatch({ type = A.SET_OUTER_GLOW, value = { blur = v } })
 				end,
 				onColorPickerToggle = function()
 					local target = if state.colorPickerTarget == "glow" then nil else "glow"
-					props.dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
+					dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = target })
 				end,
 				LayoutOrder = 1,
 			}),
@@ -863,16 +864,16 @@ local function Sidebar(props: Props)
 				opacity = state.chromaticAberration.opacity,
 				angle = state.chromaticAberration.angle,
 				onToggle = function(v)
-					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { enabled = v } })
+					dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { enabled = v } })
 				end,
 				onDistanceChanged = function(v)
-					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { distance = v } })
+					dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { distance = v } })
 				end,
 				onOpacityChanged = function(v)
-					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { opacity = v } })
+					dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { opacity = v } })
 				end,
 				onAngleChanged = function(v)
-					props.dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { angle = v } })
+					dispatch({ type = A.SET_CHROMATIC_ABERRATION, value = { angle = v } })
 				end,
 				LayoutOrder = 1,
 			}),

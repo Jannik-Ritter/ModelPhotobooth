@@ -2,31 +2,25 @@ local Packages = script.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local Selection = game:GetService("Selection")
-local CollectionService = game:GetService("CollectionService")
-
 local Store = require(script.Parent.Store)
-local renderOne = require(script.Parent.lib.renderOne)
-local exportAll = require(script.Parent.lib.exportAll)
-local uploadOne = require(script.Parent.lib.uploadOne)
-local PresetSerialization = require(script.Parent.lib.presetSerialization)
-local ToolbarStrip = require(script.Parent.components.ToolbarStrip)
-local PreviewViewport = require(script.Parent.components.PreviewViewport)
-local ModelStrip = require(script.Parent.components.ModelStrip)
-local RenderStrip = require(script.Parent.components.RenderStrip)
-local Sidebar = require(script.Parent.components.Sidebar)
-local ImagePreviewModal = require(script.Parent.components.modals.ImagePreviewModal)
-local ColorPickerModal = require(script.Parent.components.modals.ColorPickerModal)
-local NameInputModal = require(script.Parent.components.modals.NameInputModal)
-local ConfirmModal = require(script.Parent.components.modals.ConfirmModal)
-local HelpShortcutsModal = require(script.Parent.components.modals.HelpShortcutsModal)
-local ProgressModal = require(script.Parent.components.modals.ProgressModal)
-local UploadResultModal = require(script.Parent.components.modals.UploadResultModal)
-local ToastContainer = require(script.Parent.components.ToastContainer)
+local StoreContext = require(script.Parent.StoreContext)
 local constants = require(script.Parent.constants)
 
+local useToasts = require(script.Parent.hooks.useToasts)
+local useWidgetInput = require(script.Parent.hooks.useWidgetInput)
+local useSelectionSync = require(script.Parent.hooks.useSelectionSync)
+local usePresetPersistence = require(script.Parent.hooks.usePresetPersistence)
+local useAnimationDetection = require(script.Parent.hooks.useAnimationDetection)
+local useRendering = require(script.Parent.hooks.useRendering)
+local useExporting = require(script.Parent.hooks.useExporting)
+local useUploading = require(script.Parent.hooks.useUploading)
+local usePreviewNavigation = require(script.Parent.hooks.usePreviewNavigation)
+local usePresetActions = require(script.Parent.hooks.usePresetActions)
+
+local MainContent = require(script.Parent.components.layout.MainContent)
+local ModalManager = require(script.Parent.components.modals.ModalManager)
+
 local e = React.createElement
-local MPB_TAG = "_MPBIcon"
 
 type Props = {
 	plugin: any,
@@ -36,55 +30,23 @@ local function App(props: Props)
 	local state, dispatch = React.useReducer(Store.reducer, Store.DEFAULT_STATE)
 	local renderingRef = React.useRef(false)
 	local modelsRef = React.useRef(Store.DEFAULT_STATE.models)
-	local activeInputsRef = React.useRef({} :: { [Enum.KeyCode]: boolean })
 	local animationPlayingRef = React.useRef(false)
 	local activeAnimationIndexRef = React.useRef(nil :: number?)
 	local uploadingRef = React.useRef(false)
-	local uploading, setUploading = React.useState(false)
-	local uploadProgress, setUploadProgress = React.useState(0)
-	local uploadTotal, setUploadTotal = React.useState(0)
-	type UploadResult = { name: string, assetId: number? }
-	local uploadResults, setUploadResults = React.useState(nil :: { UploadResult }?)
-	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
-	type ToastEntry = ToastContainer.ToastEntry
-	local toasts, setToasts = React.useState({} :: { ToastEntry })
-	local nextToastId = React.useRef(0)
 
-	local function addToast(variant: string, message: string)
-		nextToastId.current += 1
-		local id = nextToastId.current
-		setToasts(function(prev)
-			local next = table.clone(prev)
-			table.insert(next, { id = id, variant = variant, message = message })
-			return next
-		end)
-	end
+	React.useEffect(function() modelsRef.current = state.models end)
 
-	local function removeToast(id: number)
-		setToasts(function(prev)
-			local next = {}
-			for _, t in ipairs(prev) do
-				if t.id ~= id then
-					table.insert(next, t)
-				end
-			end
-			return next
-		end)
-	end
-	local helpOpen, setHelpOpen =
-		React.useState(if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else false)
-	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
-	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
-	local stripTab, setStripTab = React.useState("Models")
-	-- Drives PreviewViewport cursor; ref-based isShiftDown() does not re-render children on key repeat
-	local shiftDown, setShiftDown = React.useState(false)
+	local toasts = useToasts()
+	local widgetInput = useWidgetInput(dispatch, animationPlayingRef, activeAnimationIndexRef)
+	useSelectionSync(dispatch, modelsRef)
+	usePresetPersistence(dispatch, state.presets, props.plugin)
 
-	-- Keep modelsRef current so the selection listener can access latest renders
-	React.useEffect(function()
-		modelsRef.current = state.models
-	end)
+	local focusedIndex = state.selectedModelIndices[#state.selectedModelIndices]
+	local activeEntry = if focusedIndex then state.models[focusedIndex] else nil
+	local activeInstance = if activeEntry then activeEntry.instance else nil
 
-	-- Keep animation refs current for input callbacks
+	useAnimationDetection(dispatch, activeInstance, animationPlayingRef, activeAnimationIndexRef)
+
 	React.useEffect(function()
 		animationPlayingRef.current = state.animationPlaying
 	end)
@@ -92,560 +54,20 @@ local function App(props: Props)
 		activeAnimationIndexRef.current = state.activeAnimationIndex
 	end)
 
-	-- Selection listener
-	React.useEffect(function()
-		local function refresh()
-			-- Build a lookup of existing entries by instance to preserve renders
-			local existing: { [Instance]: Store.ModelEntry } = {}
-			for _, entry in ipairs(modelsRef.current) do
-				existing[entry.instance] = entry
-			end
+	local rendering = useRendering(state, dispatch, renderingRef, animationPlayingRef, toasts.addToast)
+	local exporting = useExporting(state, toasts.addToast)
+	local uploading = useUploading(state, uploadingRef)
+	local previewNav = usePreviewNavigation(state)
+	local presets = usePresetActions(state, dispatch)
 
-			local sel = Selection:Get()
-			local models: { Store.ModelEntry } = {}
-			for _, obj in ipairs(sel) do
-				if CollectionService:HasTag(obj, MPB_TAG) then
-					table.insert(models, {
-						instance = obj,
-						status = "ok" :: Store.RenderStatus,
-						image = nil,
-						isExported = true,
-					})
-				elseif obj:IsA("Model") or obj:IsA("BasePart") then
-					local prev = existing[obj]
-					table.insert(models, {
-						instance = obj,
-						status = if prev then prev.status else "idle" :: Store.RenderStatus,
-						image = if prev then prev.image else nil,
-						isExported = false,
-					})
-				end
-			end
-			dispatch({ type = Store.ACTIONS.SET_MODELS, value = models })
-			dispatch({
-				type = Store.ACTIONS.SET_SELECTION,
-				value = if #models > 0 then { 1 } else {},
-			})
-		end
-		local conn = Selection.SelectionChanged:Connect(refresh)
-		refresh()
-		return function()
-			conn:Disconnect()
-		end
-	end, {} :: { any })
+	local sidebarAlpha, setSidebarAlpha = React.useState(0.65)
+	local modelStripAlpha, setModelStripAlpha = React.useState(0.82)
+	local stripTab, setStripTab = React.useState("Models")
+	local helpOpen, setHelpOpen = React.useState(
+		if props.plugin:GetSetting("hasSeenHelp") ~= true then "General" else false
+	)
+	local deleteConfirmIndex, setDeleteConfirmIndex = React.useState(nil :: number?)
 
-	-- Load persisted presets on mount
-	React.useEffect(function()
-		local raw = props.plugin:GetSetting("presets")
-		if type(raw) == "table" then
-			local ok, result = pcall(PresetSerialization.deserialize, raw)
-			if ok then
-				dispatch({ type = Store.ACTIONS.SET_PRESETS, value = result })
-			end
-		end
-	end, {} :: { any })
-
-	-- Persist presets whenever they change
-	React.useEffect(function()
-		props.plugin:SetSetting("presets", PresetSerialization.serialize(state.presets))
-	end, { state.presets } :: { any })
-
-	-- Active model entry (used for animation detection — defined early)
-	local focusedIndex = state.selectedModelIndices[#state.selectedModelIndices]
-	local activeEntry = if focusedIndex then state.models[focusedIndex] else nil
-	local activeInstance = if activeEntry then activeEntry.instance else nil
-
-	-- Detect animations in the active model
-	React.useEffect(function()
-		if not activeInstance then
-			dispatch({ type = Store.ACTIONS.SET_ANIMATIONS, value = {} })
-			return
-		end
-		local anims: { Store.AnimationInfo } = {}
-		for _, desc in ipairs(activeInstance:GetDescendants()) do
-			if desc:IsA("Animation") and desc.AnimationId ~= "" then
-				table.insert(anims, {
-					name = desc.Name,
-					animationId = desc.AnimationId,
-				})
-			end
-		end
-		dispatch({ type = Store.ACTIONS.SET_ANIMATIONS, value = anims })
-	end, { activeInstance } :: { any })
-
-	local function renderSettings()
-		return {
-			yaw = state.yaw,
-			pitch = state.pitch,
-			roll = state.roll,
-			fov = state.fov,
-			cameraDistance = state.cameraDistance,
-			cameraOffsetX = state.cameraOffsetX,
-			cameraOffsetY = state.cameraOffsetY,
-			cameraOffsetZ = state.cameraOffsetZ,
-			outline = state.outline,
-			dropShadow = state.dropShadow,
-			innerShadow = state.innerShadow,
-			outerGlow = state.outerGlow,
-			chromaticAberration = state.chromaticAberration,
-			lighting = state.lighting,
-			bgMode = state.bgMode,
-			bgColor = state.bgColor,
-			exportSize = state.exportSize,
-			animationId = if state.activeAnimationIndex
-				then state.animations[state.activeAnimationIndex]
-					and state.animations[state.activeAnimationIndex].animationId
-				else nil,
-			animationTimePosition = state.animationTimePosition,
-		}
-	end
-
-	local function onWidgetInputBegan(_, input)
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			activeInputsRef.current[input.KeyCode] = true
-			if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
-				setShiftDown(
-					activeInputsRef.current[Enum.KeyCode.LeftShift] == true
-						or activeInputsRef.current[Enum.KeyCode.RightShift] == true
-				)
-			end
-			if input.KeyCode == Enum.KeyCode.Space and activeAnimationIndexRef.current then
-				dispatch({
-					type = Store.ACTIONS.SET_ANIMATION_PLAYING,
-					value = not animationPlayingRef.current,
-				})
-			end
-		end
-	end
-
-	local function onWidgetInputEnded(_, input)
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			activeInputsRef.current[input.KeyCode] = nil
-			if input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
-				setShiftDown(
-					activeInputsRef.current[Enum.KeyCode.LeftShift] == true
-						or activeInputsRef.current[Enum.KeyCode.RightShift] == true
-				)
-			end
-		end
-	end
-
-	local function isKeyDown(key: Enum.KeyCode)
-		return activeInputsRef.current[key]
-	end
-
-	local function isCtrlDown()
-		return isKeyDown(Enum.KeyCode.LeftControl) or isKeyDown(Enum.KeyCode.RightControl)
-	end
-
-	local function isShiftDown()
-		return isKeyDown(Enum.KeyCode.LeftShift) or isKeyDown(Enum.KeyCode.RightShift)
-	end
-
-	-- Animation callbacks
-	local function onSelectAnimation(index: number?)
-		dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = index })
-	end
-
-	local function onSetAnimationPlaying(playing: boolean)
-		dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = playing })
-	end
-
-	local function onSetAnimationTimePosition(time: number)
-		dispatch({ type = Store.ACTIONS.SET_ANIMATION_TIME, value = time })
-	end
-
-	local function onSetAnimationLength(length: number)
-		dispatch({ type = Store.ACTIONS.SET_ANIMATION_LENGTH, value = length })
-	end
-
-	-- Render the currently selected models
-	local function startRenderSelected()
-		if renderingRef.current then
-			return
-		end
-		local targets = {}
-		for _, idx in ipairs(state.selectedModelIndices) do
-			local entry = state.models[idx]
-			if entry and not entry.isExported then
-				table.insert(targets, { index = idx, entry = entry })
-			end
-		end
-		if #targets == 0 then
-			return
-		end
-		-- Pause animation playback during render
-		if animationPlayingRef.current then
-			dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = false })
-		end
-		renderingRef.current = true
-		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
-
-		task.spawn(function()
-			local failCount = 0
-			local successCount = 0
-			for i, target in ipairs(targets) do
-				dispatch({ type = Store.ACTIONS.SET_RENDER_STATUS, index = target.index, status = "pending" })
-				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i - 1, total = #targets })
-
-				local ok, img = renderOne(target.entry.instance, renderSettings()):await()
-				if ok then
-					successCount += 1
-				else
-					failCount += 1
-				end
-				dispatch({
-					type = Store.ACTIONS.SET_RENDER_STATUS,
-					index = target.index,
-					status = if ok then "ok" else "fail",
-					image = if ok then img else nil,
-				})
-				if ok and img then
-					dispatch({
-						type = Store.ACTIONS.SET_RENDER_HISTORY_ENTRY,
-						image = img,
-						modelName = target.entry.instance.Name,
-						modelIndex = target.index,
-					})
-				end
-				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i, total = #targets })
-				task.wait()
-			end
-			dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = false, progress = 0, total = 0 })
-			renderingRef.current = false
-
-			if failCount > 0 and successCount == 0 then
-				addToast(
-					"error",
-					if #targets == 1
-						then "Render failed: Studio viewport too small"
-						else `All {failCount} renders failed: Studio viewport too small`
-				)
-			elseif failCount > 0 then
-				addToast(
-					"error",
-					`{failCount} render{if failCount == 1 then "" else "s"} failed: Studio viewport too small`
-				)
-			end
-		end)
-	end
-
-	-- Render all non-exported models
-	local function startRenderAll()
-		if renderingRef.current then
-			return
-		end
-		local targets = {}
-		for i, entry in ipairs(state.models) do
-			if not entry.isExported then
-				table.insert(targets, { index = i, entry = entry })
-			end
-		end
-		if #targets == 0 then
-			return
-		end
-		-- Pause animation playback during render
-		if animationPlayingRef.current then
-			dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = false })
-		end
-		renderingRef.current = true
-		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = #targets })
-
-		task.spawn(function()
-			local failCount = 0
-			local successCount = 0
-			for i, target in ipairs(targets) do
-				dispatch({ type = Store.ACTIONS.SET_RENDER_STATUS, index = target.index, status = "pending" })
-				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i - 1, total = #targets })
-
-				local ok, img = renderOne(target.entry.instance, renderSettings()):await()
-				if ok then
-					successCount += 1
-				else
-					failCount += 1
-				end
-				dispatch({
-					type = Store.ACTIONS.SET_RENDER_STATUS,
-					index = target.index,
-					status = if ok then "ok" else "fail",
-					image = if ok then img else nil,
-				})
-				if ok and img then
-					dispatch({
-						type = Store.ACTIONS.SET_RENDER_HISTORY_ENTRY,
-						image = img,
-						modelName = target.entry.instance.Name,
-						modelIndex = target.index,
-					})
-				end
-				dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = i, total = #targets })
-				task.wait()
-			end
-			dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = false, progress = 0, total = 0 })
-			renderingRef.current = false
-
-			if failCount > 0 and successCount == 0 then
-				addToast(
-					"error",
-					if #targets == 1
-						then "Render failed: Studio viewport too small"
-						else `All {failCount} renders failed: Studio viewport too small`
-				)
-			elseif failCount > 0 then
-				addToast(
-					"error",
-					`{failCount} render{if failCount == 1 then "" else "s"} failed: Studio viewport too small`
-				)
-			end
-		end)
-	end
-
-	-- Export all
-	local function doExport()
-		local parts = exportAll(state.models)
-		if #parts > 0 then
-			pcall(function()
-				Selection:Set(parts)
-			end)
-			addToast("normal", `Exported {#parts} model{if #parts == 1 then "" else "s"} to Workspace`)
-		end
-	end
-
-	-- Export only the currently previewed model
-	local function exportPreview()
-		local idx = state.previewModelIndex
-		if not idx then
-			return
-		end
-		local entry = state.models[idx]
-		if not entry or not entry.image then
-			return
-		end
-		local parts = exportAll({ entry })
-		if #parts > 0 then
-			pcall(function()
-				Selection:Set(parts)
-			end)
-		end
-	end
-
-	-- Upload only the currently previewed model's image
-	local function uploadPreview()
-		if uploadingRef.current then
-			return
-		end
-		local idx = state.previewModelIndex
-		if not idx then
-			return
-		end
-		local entry = state.models[idx]
-		if not entry or not entry.image then
-			return
-		end
-		uploadingRef.current = true
-		setUploading(true)
-		setUploadTotal(1)
-		setUploadProgress(0)
-		task.spawn(function()
-			local ok, assetId = uploadOne(entry.image :: EditableImage, entry.instance.Name)
-			uploadingRef.current = false
-			setUploading(false)
-			setUploadTotal(0)
-			setUploadProgress(0)
-			setUploadResults({ { name = entry.instance.Name, assetId = if ok then assetId else nil } })
-		end)
-	end
-
-	-- Export the currently previewed image (works for history entries too)
-	local function exportPreviewImage()
-		if not state.previewImage then
-			return
-		end
-		local tempEntry = {
-			instance = { Name = state.previewTitle or "Render" },
-			image = state.previewImage,
-			status = "ok" :: Store.RenderStatus,
-			isExported = false,
-		}
-		local parts = exportAll({ tempEntry })
-		if #parts > 0 then
-			pcall(function()
-				Selection:Set(parts)
-			end)
-		end
-	end
-
-	-- Upload the currently previewed image (works for history entries too)
-	local function uploadPreviewImage()
-		if uploadingRef.current or not state.previewImage then
-			return
-		end
-		uploadingRef.current = true
-		setUploading(true)
-		setUploadTotal(1)
-		setUploadProgress(0)
-		task.spawn(function()
-			local ok, assetId = uploadOne(state.previewImage :: EditableImage, state.previewTitle or "Render")
-			uploadingRef.current = false
-			setUploading(false)
-			setUploadTotal(0)
-			setUploadProgress(0)
-			setUploadResults({ { name = state.previewTitle or "Render", assetId = if ok then assetId else nil } })
-		end)
-	end
-
-	-- Re-render only the currently previewed model
-	local function rerenderPreview()
-		if renderingRef.current then
-			return
-		end
-		local idx = state.previewModelIndex
-		if not idx then
-			return
-		end
-		local entry = state.models[idx]
-		if not entry or entry.isExported then
-			return
-		end
-
-		renderingRef.current = true
-		dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = true, progress = 0, total = 1 })
-		dispatch({ type = Store.ACTIONS.SET_RENDER_STATUS, index = idx, status = "pending" })
-
-		task.spawn(function()
-			local ok, img = renderOne(entry.instance, renderSettings()):await()
-			dispatch({
-				type = Store.ACTIONS.SET_RENDER_STATUS,
-				index = idx,
-				status = if ok then "ok" else "fail",
-				image = if ok then img else nil,
-			})
-			dispatch({ type = Store.ACTIONS.SET_RENDERING, rendering = false, progress = 0, total = 0 })
-			renderingRef.current = false
-			if ok and img then
-				dispatch({
-					type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-					image = img,
-					title = entry.instance.Name,
-					index = idx,
-				})
-			else
-				addToast("error", "Render failed: Studio viewport too small")
-			end
-		end)
-	end
-
-	-- Preset handlers
-	local function openSaveModal()
-		dispatch({ type = Store.ACTIONS.SET_NAME_INPUT_MODAL, value = { mode = "save" } })
-	end
-
-	local function openRenameModal(index: number)
-		local preset = state.presets[index]
-		if not preset then
-			return
-		end
-		dispatch({
-			type = Store.ACTIONS.SET_NAME_INPUT_MODAL,
-			value = { mode = "rename", targetIndex = index, initialName = preset.name },
-		})
-	end
-
-	local function closeNameInputModal()
-		dispatch({ type = Store.ACTIONS.SET_NAME_INPUT_MODAL, value = nil })
-	end
-
-	local function confirmNameInput(name: string)
-		local modal = state.nameInputModal
-		if not modal then
-			return
-		end
-		local next = table.clone(state.presets)
-		if modal.mode == "save" then
-			table.insert(next, {
-				name = name,
-				yaw = state.yaw,
-				pitch = state.pitch,
-				roll = state.roll,
-				fov = state.fov,
-				cameraDistance = state.cameraDistance,
-				cameraOffsetX = state.cameraOffsetX,
-				cameraOffsetY = state.cameraOffsetY,
-				cameraOffsetZ = state.cameraOffsetZ,
-				bgMode = state.bgMode,
-				bgColor = state.bgColor,
-				exportSize = state.exportSize,
-				outline = state.outline,
-				dropShadow = state.dropShadow,
-				innerShadow = state.innerShadow,
-				outerGlow = state.outerGlow,
-				chromaticAberration = state.chromaticAberration,
-				lighting = state.lighting,
-			})
-		elseif modal.mode == "rename" and modal.targetIndex then
-			local entry = table.clone(next[modal.targetIndex])
-			entry.name = name
-			next[modal.targetIndex] = entry
-		end
-		dispatch({ type = Store.ACTIONS.SET_PRESETS, value = next })
-	end
-
-	local function applyPreset(index: number)
-		local preset = state.presets[index]
-		if not preset then
-			return
-		end
-		dispatch({ type = Store.ACTIONS.APPLY_PRESET, value = preset })
-	end
-
-	local function deletePreset(index: number)
-		setDeleteConfirmIndex(index)
-	end
-
-	local function confirmDeletePreset()
-		if not deleteConfirmIndex then
-			return
-		end
-		local next = table.clone(state.presets)
-		table.remove(next, deleteConfirmIndex)
-		dispatch({ type = Store.ACTIONS.SET_PRESETS, value = next })
-	end
-
-	-- Upload all rendered images to Roblox
-	local function doUploadAll()
-		if uploadingRef.current then
-			return
-		end
-		local targets = {}
-		for _, entry in ipairs(state.models) do
-			if entry.image then
-				table.insert(targets, entry)
-			end
-		end
-		if #targets == 0 then
-			return
-		end
-		uploadingRef.current = true
-		setUploading(true)
-		setUploadProgress(0)
-		setUploadTotal(#targets)
-		task.spawn(function()
-			local results: { UploadResult } = {}
-			for i, entry in ipairs(targets) do
-				setUploadProgress(i - 1)
-				local ok, assetId = uploadOne(entry.image :: EditableImage, entry.instance.Name)
-				table.insert(results, { name = entry.instance.Name, assetId = if ok then assetId else nil })
-				setUploadProgress(i)
-			end
-			uploadingRef.current = false
-			setUploading(false)
-			setUploadTotal(0)
-			setUploadProgress(0)
-			setUploadResults(results)
-		end)
-	end
-
-	-- Trackball handler
 	local function onTrackball(dYaw: number, dPitch: number)
 		dispatch({
 			type = Store.ACTIONS.SET_CAMERA,
@@ -655,7 +77,6 @@ local function App(props: Props)
 		})
 	end
 
-	-- Translate handler (Shift+drag)
 	local function onTranslate(dx: number, dy: number, dz: number)
 		dispatch({
 			type = Store.ACTIONS.SET_CAMERA_OFFSET,
@@ -665,13 +86,9 @@ local function App(props: Props)
 		})
 	end
 
-	-- Scroll-to-zoom handler
 	local function onScroll(direction: number)
-		local ctrlDown = isCtrlDown()
-
-		if ctrlDown then
-			local newFov =
-				math.clamp(state.fov + direction * constants.FOV_SCROLL_STEP, constants.FOV_MIN, constants.FOV_MAX)
+		if widgetInput.isCtrlDown() then
+			local newFov = math.clamp(state.fov + direction * constants.FOV_SCROLL_STEP, constants.FOV_MIN, constants.FOV_MAX)
 			dispatch({ type = Store.ACTIONS.SET_FOV, value = newFov })
 		else
 			local newDistance = math.clamp(
@@ -695,420 +112,175 @@ local function App(props: Props)
 		dispatch({ type = Store.ACTIONS.SET_CAMERA_DISTANCE, value = Store.DEFAULT_STATE.cameraDistance })
 	end
 
-	local totalCount = 0
-	for _, entry in ipairs(state.models) do
-		if not entry.isExported then
-			totalCount += 1
-		end
-	end
-
-	local hasRenders = false
-	for _, entry in ipairs(state.models) do
-		if entry.image then
-			hasRenders = true
-			break
-		end
-	end
-
-	local hasRenderableSelected = false
-	for _, idx in ipairs(state.selectedModelIndices) do
-		local entry = state.models[idx]
-		if entry and not entry.isExported then
-			hasRenderableSelected = true
-			break
-		end
-	end
-
-	-- Adjacent rendered models for prev/next navigation in preview modal
-	local prevRenderedIndex = nil
-	local nextRenderedIndex = nil
-	local previewIdx = state.previewModelIndex
-	if previewIdx then
-		for i = previewIdx - 1, 1, -1 do
-			if state.models[i] and state.models[i].image then
-				prevRenderedIndex = i
-				break
+	local function onSelectModel(index: number)
+		if widgetInput.isCtrlDown() then
+			local next = {}
+			local found = false
+			for _, i in ipairs(state.selectedModelIndices) do
+				if i == index then
+					found = true
+				else
+					table.insert(next, i)
+				end
 			end
-		end
-		for i = previewIdx + 1, #state.models do
-			if state.models[i] and state.models[i].image then
-				nextRenderedIndex = i
-				break
-			end
-		end
-	end
-
-	local prevHistoryIndex = nil
-	local nextHistoryIndex = nil
-	local previewHistIdx = state.previewHistoryIndex
-	if previewHistIdx then
-		if previewHistIdx > 1 then
-			prevHistoryIndex = previewHistIdx - 1
-		end
-		if previewHistIdx < #state.renderHistory then
-			nextHistoryIndex = previewHistIdx + 1
+			if not found then table.insert(next, index) end
+			dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
+		else
+			dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
+			dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = nil })
 		end
 	end
 
-	local previewFromHistory = state.previewHistoryIndex ~= nil
+	local function onPreviewModel(index: number)
+		local entry = state.models[index]
+		if entry and entry.image then
+			dispatch({
+				type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+				image = entry.image,
+				title = entry.instance.Name,
+				index = index,
+				historyIndex = nil,
+			})
+		end
+	end
 
-	return e(StudioComponents.PluginProvider, {
-		Plugin = props.plugin,
-	}, {
-		background = e(StudioComponents.Background, {
-			Size = UDim2.fromScale(1, 1),
-		}, {
-			inputCapture = e("TextButton", {
-				Size = UDim2.fromScale(1, 1),
-				BackgroundTransparency = 1,
-				BorderSizePixel = 0,
-				Active = true,
-				Text = "",
-				AutoButtonColor = false,
-				ZIndex = 9999,
-				[React.Event.InputBegan] = onWidgetInputBegan,
-				[React.Event.InputEnded] = onWidgetInputEnded,
-			}, {
-				toolbar = e(ToolbarStrip, {
-					rendering = state.rendering,
-					onRender = startRenderSelected,
-					onRenderAll = startRenderAll,
-					onExport = doExport,
-					onUploadAll = doUploadAll,
-					onHelp = function()
-						setHelpOpen("General")
-					end,
-					renderDisabled = not hasRenderableSelected,
-					renderAllDisabled = totalCount == 0,
-					exportDisabled = not hasRenders,
-					uploadAllDisabled = not hasRenders or uploading,
-				}),
-				content = e("Frame", {
-					Size = UDim2.new(1, 0, 1, -36),
-					Position = UDim2.fromOffset(0, 36),
-					BackgroundTransparency = 1,
-				}, {
-					mainSplitter = e(StudioComponents.Splitter, {
-						Alpha = sidebarAlpha,
-						OnChanged = setSidebarAlpha,
-						FillDirection = Enum.FillDirection.Horizontal,
-					}, {
-						Side0 = e(StudioComponents.Splitter, {
-							Alpha = modelStripAlpha,
-							OnChanged = setModelStripAlpha,
-							FillDirection = Enum.FillDirection.Vertical,
-						}, {
-							Side0 = e(PreviewViewport, {
-								entry = activeEntry,
-								lighting = state.lighting,
-								yaw = state.yaw,
-								pitch = state.pitch,
-								roll = state.roll,
-								fov = state.fov,
-								cameraDistance = state.cameraDistance,
-								offsetX = state.cameraOffsetX,
-								offsetY = state.cameraOffsetY,
-								offsetZ = state.cameraOffsetZ,
-								onTrackball = onTrackball,
-								onTranslate = onTranslate,
-								onScroll = onScroll,
-								onResetCamera = onResetCamera,
-								isShiftDown = isShiftDown,
-								shiftDown = shiftDown,
-								animations = state.animations,
-								activeAnimationIndex = state.activeAnimationIndex,
-								animationPlaying = state.animationPlaying,
-								animationTimePosition = state.animationTimePosition,
-								animationLength = state.animationLength,
-								onSelectAnimation = onSelectAnimation,
-								onSetPlaying = onSetAnimationPlaying,
-								onSetTimePosition = onSetAnimationTimePosition,
-								onSetLength = onSetAnimationLength,
-							}),
-							Side1 = e("Frame", {
-								Size = UDim2.fromScale(1, 1),
-								BackgroundTransparency = 1,
-							}, {
-								tabs = e(StudioComponents.TabContainer, {
-									Size = UDim2.fromScale(1, 1),
-									SelectedTab = stripTab,
-									OnTabSelected = setStripTab,
-								}, {
-									["Models"] = {
-										LayoutOrder = 1,
-										Content = e(ModelStrip, {
-											models = state.models,
-											selectedModelIndices = state.selectedModelIndices,
-											lighting = state.lighting,
-											yaw = state.yaw,
-											pitch = state.pitch,
-											roll = state.roll,
-											fov = state.fov,
-											cameraDistance = state.cameraDistance,
-											offsetX = state.cameraOffsetX,
-											offsetY = state.cameraOffsetY,
-											offsetZ = state.cameraOffsetZ,
-											onSelectModel = function(index)
-												local ctrlDown = isCtrlDown()
-												if ctrlDown then
-													local next = {}
-													local found = false
-													for _, i in ipairs(state.selectedModelIndices) do
-														if i == index then
-															found = true
-														else
-															table.insert(next, i)
-														end
-													end
-													if not found then
-														table.insert(next, index)
-													end
-													dispatch({ type = Store.ACTIONS.SET_SELECTION, value = next })
-												else
-													dispatch({ type = Store.ACTIONS.SET_SELECTION, value = { index } })
-													dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = nil })
-												end
-											end,
-											onPreviewModel = function(index)
-												local entry = state.models[index]
-												if entry and entry.image then
-													dispatch({
-														type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-														image = entry.image,
-														title = entry.instance.Name,
-														index = index,
-														historyIndex = nil,
-													})
-												end
-											end,
-										}),
-									},
-									["Renders"] = {
-										LayoutOrder = 2,
-										Content = e(RenderStrip, {
-											renderHistory = state.renderHistory,
-											previewHistoryIndex = state.previewHistoryIndex,
-											onPreviewRender = function(index)
-												local entry = state.renderHistory[index]
-												if entry then
-													dispatch({
-														type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-														image = entry.image,
-														title = entry.modelName,
-														index = nil,
-														historyIndex = index,
-													})
-												end
-											end,
-										}),
-									},
-								}),
-							}),
-						}),
-						Side1 = e(Sidebar, {
-							state = state,
-							dispatch = dispatch,
-							onSavePreset = openSaveModal,
-							onApplyPreset = applyPreset,
-							onRenamePreset = openRenameModal,
-							onDeletePreset = deletePreset,
-						}),
-					}),
-				}),
-				progressModal = if state.rendering and state.renderTotal > 0
-					then e(ProgressModal, {
-						verb = "Rendering",
-						progress = state.renderProgress,
-						total = state.renderTotal,
-					})
-					elseif uploading and uploadTotal > 0 then e(ProgressModal, {
-						verb = "Uploading",
-						progress = uploadProgress,
-						total = uploadTotal,
-					})
-					else nil,
-				uploadResultModal = if uploadResults ~= nil
-					then e(UploadResultModal, {
-						results = uploadResults,
-						onClose = function()
-							setUploadResults(nil)
-						end,
-						onHelp = function()
-							setUploadResults(nil)
-							setHelpOpen("Common Issues")
-						end,
-					})
-					else nil,
-				imagePreview = if state.previewImage
-				then e(ImagePreviewModal, {
-					image = state.previewImage,
-					title = state.previewTitle or "Preview",
-					rendering = state.rendering,
-					hasPrev = if previewFromHistory then prevHistoryIndex ~= nil else prevRenderedIndex ~= nil,
-					hasNext = if previewFromHistory then nextHistoryIndex ~= nil else nextRenderedIndex ~= nil,
-					onClose = function()
-						dispatch({
-							type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-							image = nil,
-							title = nil,
-							index = nil,
-							historyIndex = nil,
-						})
-					end,
-					onExport = exportPreviewImage,
-					onUpload = uploadPreviewImage,
-					onRerender = rerenderPreview,
-					uploading = uploading,
-					hideRerender = previewFromHistory,
-					onPrev = if previewFromHistory
-						then (if prevHistoryIndex
-							then function()
-								local entry = state.renderHistory[prevHistoryIndex]
-								dispatch({
-									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-									image = entry.image,
-									title = entry.modelName,
-									index = nil,
-									historyIndex = prevHistoryIndex,
-								})
-							end
-							else nil)
-						else (if prevRenderedIndex
-							then function()
-								local entry = state.models[prevRenderedIndex]
-								dispatch({
-									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-									image = entry.image,
-									title = entry.instance.Name,
-									index = prevRenderedIndex,
-									historyIndex = nil,
-								})
-							end
-							else nil),
-					onNext = if previewFromHistory
-						then (if nextHistoryIndex
-							then function()
-								local entry = state.renderHistory[nextHistoryIndex]
-								dispatch({
-									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-									image = entry.image,
-									title = entry.modelName,
-									index = nil,
-									historyIndex = nextHistoryIndex,
-								})
-							end
-							else nil)
-						else (if nextRenderedIndex
-							then function()
-								local entry = state.models[nextRenderedIndex]
-								dispatch({
-									type = Store.ACTIONS.SET_PREVIEW_IMAGE,
-									image = entry.image,
-									title = entry.instance.Name,
-									index = nextRenderedIndex,
-									historyIndex = nil,
-								})
-							end
-							else nil),
+	local function onPreviewRender(index: number)
+		local entry = state.renderHistory[index]
+		if entry then
+			dispatch({
+				type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+				image = entry.image,
+				title = entry.modelName,
+				index = nil,
+				historyIndex = index,
+			})
+		end
+	end
+
+	local function makePreviewNavFn(fromHistory: boolean, backward: boolean)
+		return function()
+			local idx = if fromHistory
+				then (if backward then previewNav.prevHistoryIndex else previewNav.nextHistoryIndex)
+				else (if backward then previewNav.prevRenderedIndex else previewNav.nextRenderedIndex)
+			if not idx then return end
+			if fromHistory then
+				local entry = state.renderHistory[idx]
+				dispatch({
+					type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+					image = entry.image,
+					title = entry.modelName,
+					index = nil,
+					historyIndex = idx,
 				})
-				else nil,
-				deleteConfirmModal = if deleteConfirmIndex ~= nil
-					then e(ConfirmModal, {
-						title = "Delete Preset",
-						message = `Delete "{if state.presets[deleteConfirmIndex]
-							then state.presets[deleteConfirmIndex].name
-							else ""}"?`,
-						confirmLabel = "Delete",
-						onConfirm = confirmDeletePreset,
-						onClose = function()
-							setDeleteConfirmIndex(nil)
-						end,
-					})
-					else nil,
-				nameInputModal = if state.nameInputModal ~= nil
-					then e(NameInputModal, {
-						mode = state.nameInputModal.mode,
-						initialName = state.nameInputModal.initialName,
-						onConfirm = confirmNameInput,
-						onClose = closeNameInputModal,
-					})
-					else nil,
-				colorPickerModal = if state.colorPickerTarget ~= nil
-					then (function()
-						local A = Store.ACTIONS
-						local target = state.colorPickerTarget
-						local title, color
-						local onPickerColor: (Color3) -> ()
-						if target == "outline" then
-							title = "Outline Color"
-							color = state.outline.color
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_OUTLINE, value = { color = c } })
-							end
-						elseif target == "shadow" then
-							title = "Shadow Color"
-							color = state.dropShadow.color
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_DROP_SHADOW, value = { color = c } })
-							end
-						elseif target == "inner" then
-							title = "Inner Shadow Color"
-							color = state.innerShadow.color
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_INNER_SHADOW, value = { color = c } })
-							end
-						elseif target == "background" then
-							title = "Background Color"
-							color = state.bgColor
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_BG_COLOR, value = c })
-							end
-						elseif target == "lightColor" then
-							title = "Light Color"
-							color = state.lighting.lightColor
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_LIGHTING, value = { lightColor = c } })
-							end
-						elseif target == "ambient" then
-							title = "Ambient Color"
-							color = state.lighting.ambient
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_LIGHTING, value = { ambient = c } })
-							end
-						else
-							title = "Outer Glow Color"
-							color = state.outerGlow.color
-							onPickerColor = function(c)
-								dispatch({ type = A.SET_OUTER_GLOW, value = { color = c } })
-							end
-						end
-						return e(ColorPickerModal, {
-							title = title,
-							color = color,
-							onColorChanged = onPickerColor,
-							onClose = function()
-								dispatch({ type = A.SET_COLOR_PICKER_TARGET, value = nil })
-							end,
-						})
-					end)()
-					else nil,
-				helpShortcutsModal = if helpOpen
-					then e(HelpShortcutsModal, {
-						initialTab = helpOpen,
-						onClose = function()
-							props.plugin:SetSetting("hasSeenHelp", true)
-							setHelpOpen(false)
-						end,
-					})
-					else nil,
-				toastContainer = e(ToastContainer, {
-					toasts = toasts,
-					onRemove = removeToast,
-					onHelp = function()
-						setHelpOpen("Common Issues")
-					end,
-				}),
+			else
+				local entry = state.models[idx]
+				dispatch({
+					type = Store.ACTIONS.SET_PREVIEW_IMAGE,
+					image = entry.image,
+					title = entry.instance.Name,
+					index = idx,
+					historyIndex = nil,
+				})
+			end
+		end
+	end
+
+	local deleteConfirmName = ""
+	if deleteConfirmIndex then
+		local preset = state.presets[deleteConfirmIndex]
+		if preset then deleteConfirmName = preset.name end
+	end
+
+	local modals = ModalManager({
+		state = state,
+		dispatch = dispatch,
+		rendering = state.rendering,
+		renderProgress = state.renderProgress,
+		renderTotal = state.renderTotal,
+		uploading = uploading.uploading,
+		uploadProgress = uploading.uploadProgress,
+		uploadTotal = uploading.uploadTotal,
+		uploadResults = uploading.uploadResults,
+		deleteConfirmIndex = deleteConfirmIndex,
+		deleteConfirmName = deleteConfirmName,
+		helpOpen = helpOpen,
+		hasPrevPreview = if previewNav.previewFromHistory then previewNav.prevHistoryIndex ~= nil else previewNav.prevRenderedIndex ~= nil,
+		hasNextPreview = if previewNav.previewFromHistory then previewNav.nextHistoryIndex ~= nil else previewNav.nextRenderedIndex ~= nil,
+		hideRerender = previewNav.previewFromHistory,
+		onClosePreview = function()
+			dispatch({ type = Store.ACTIONS.SET_PREVIEW_IMAGE, image = nil, title = nil, index = nil, historyIndex = nil })
+		end,
+		onExportPreview = exporting.exportPreviewImage,
+		onUploadPreview = uploading.uploadPreviewImage,
+		onRerenderPreview = rendering.rerenderPreview,
+		onPrevPreview = makePreviewNavFn(previewNav.previewFromHistory, true),
+		onNextPreview = makePreviewNavFn(previewNav.previewFromHistory, false),
+		onCloseUploadResults = function() uploading.setUploadResults(nil) end,
+		onHelpFromUpload = function() uploading.setUploadResults(nil); setHelpOpen("Common Issues") end,
+		onCloseDeleteConfirm = function() setDeleteConfirmIndex(nil) end,
+		onConfirmDeletePreset = function()
+			if deleteConfirmIndex then presets.confirmDeletePreset(deleteConfirmIndex) end
+			setDeleteConfirmIndex(nil)
+		end,
+		onCloseNameInput = presets.closeNameInputModal,
+		onConfirmNameInput = presets.confirmNameInput,
+		onCloseColorPicker = function()
+			dispatch({ type = Store.ACTIONS.SET_COLOR_PICKER_TARGET, value = nil })
+		end,
+		onCloseHelp = function()
+			props.plugin:SetSetting("hasSeenHelp", true)
+			setHelpOpen(false)
+		end,
+		toasts = toasts.toasts,
+		onRemoveToast = toasts.removeToast,
+		onHelpFromToast = function() setHelpOpen("Common Issues") end,
+	})
+
+	return e(StudioComponents.PluginProvider, { Plugin = props.plugin }, {
+		storeProvider = e(StoreContext.Provider, {
+			value = { state = state, dispatch = dispatch },
+		}, {
+			mainContent = e(MainContent, {
+				inputCaptureProps = widgetInput.inputCaptureProps,
+				sidebarAlpha = sidebarAlpha,
+				setSidebarAlpha = setSidebarAlpha,
+				modelStripAlpha = modelStripAlpha,
+				setModelStripAlpha = setModelStripAlpha,
+				stripTab = stripTab,
+				setStripTab = setStripTab,
+				shiftDown = widgetInput.shiftDown,
+				isShiftDown = widgetInput.isShiftDown,
+				activeEntry = activeEntry,
+				onTrackball = onTrackball,
+				onTranslate = onTranslate,
+				onScroll = onScroll,
+				onResetCamera = onResetCamera,
+				onSelectAnimation = function(index)
+					dispatch({ type = Store.ACTIONS.SET_ACTIVE_ANIMATION, value = index })
+				end,
+				onSetPlaying = function(playing)
+					dispatch({ type = Store.ACTIONS.SET_ANIMATION_PLAYING, value = playing })
+				end,
+				onSetTimePosition = function(time)
+					dispatch({ type = Store.ACTIONS.SET_ANIMATION_TIME, value = time })
+				end,
+				onSetLength = function(length)
+					dispatch({ type = Store.ACTIONS.SET_ANIMATION_LENGTH, value = length })
+				end,
+				onSelectModel = onSelectModel,
+				onPreviewModel = onPreviewModel,
+				onPreviewRender = onPreviewRender,
+				onSavePreset = presets.openSaveModal,
+				onApplyPreset = presets.applyPreset,
+				onRenamePreset = presets.openRenameModal,
+				onDeletePreset = function(index) setDeleteConfirmIndex(index) end,
+				onRender = rendering.startRenderSelected,
+				onRenderAll = rendering.startRenderAll,
+				onExport = exporting.doExport,
+				onUploadAll = uploading.doUploadAll,
+				onHelp = function() setHelpOpen("General") end,
 			}),
+			modals = e("Folder", {}, modals),
 		}),
 	})
 end

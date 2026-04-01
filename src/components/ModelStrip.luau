@@ -2,7 +2,7 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local Store = require(script.Parent.Parent.Store)
+local StoreContext = require(script.Parent.Parent.StoreContext)
 local ModelThumb = require(script.Parent.ModelThumb)
 
 local e = React.createElement
@@ -10,23 +10,14 @@ local e = React.createElement
 local PADDING_V = 9 -- PaddingTop + PaddingBottom each
 
 type Props = {
-	models: { Store.ModelEntry },
-	selectedModelIndices: { number },
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	offsetX: number,
-	offsetY: number,
-	offsetZ: number,
-	lighting: Store.LightingState,
 	onSelectModel: (index: number) -> (),
 	onPreviewModel: (index: number) -> (),
 }
 
 -- Bottom strip: same chrome as ToolbarStrip; Studio Label / ScrollFrame for content.
 local function ModelStrip(props: Props)
+	local store = StoreContext.useStore()
+	local state = store.state
 	local theme = StudioComponents.useTheme()
 	local stripHeight, setStripHeight = React.useState(80)
 
@@ -47,7 +38,7 @@ local function ModelStrip(props: Props)
 		[React.Change.AbsoluteSize] = onAbsoluteSize,
 	}
 
-	if #props.models == 0 then
+	if #state.models == 0 then
 		return e("Frame", stripRoot, {
 			label = e(StudioComponents.Label, {
 				Text = "Select models in Explorer",
@@ -59,27 +50,18 @@ local function ModelStrip(props: Props)
 	end
 
 	local selectedSet: { [number]: boolean } = {}
-	for _, idx in ipairs(props.selectedModelIndices) do
+	for _, idx in ipairs(state.selectedModelIndices) do
 		selectedSet[idx] = true
 	end
 
 	local thumbs = {}
-	for i, entry in ipairs(props.models) do
+	for i, entry in ipairs(state.models) do
 		-- Key by model identity (not index) so list compaction does not recycle a thumb's internal
 		-- viewport state onto a different model when selection order changes.
 		local thumbKey = "thumb_" .. entry.instance:GetDebugId(0)
 		thumbs[thumbKey] = e(ModelThumb, {
 			entry = entry,
 			thumbSize = thumbSize,
-			lighting = props.lighting,
-			yaw = props.yaw,
-			pitch = props.pitch,
-			roll = props.roll,
-			fov = props.fov,
-			cameraDistance = props.cameraDistance,
-			offsetX = props.offsetX,
-			offsetY = props.offsetY,
-			offsetZ = props.offsetZ,
 			isActive = selectedSet[i] == true,
 			onSelect = function()
 				props.onSelectModel(i)

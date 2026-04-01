@@ -5,6 +5,8 @@ local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
 local applyCamera = require(script.Parent.Parent.lib.applyCamera)
+local Store = require(script.Parent.Parent.Store)
+local StoreContext = require(script.Parent.Parent.StoreContext)
 local useTrackball = require(script.Parent.Parent.hooks.useTrackball)
 local constants = require(script.Parent.Parent.constants)
 local AnimationPanel = require(script.Parent.AnimationPanel)
@@ -52,14 +54,6 @@ type Props = {
 		image: EditableImage?,
 		isExported: boolean,
 	}?,
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	offsetX: number,
-	offsetY: number,
-	offsetZ: number,
 	onTrackball: (dYaw: number, dPitch: number) -> (),
 	onTranslate: (dx: number, dy: number, dz: number) -> (),
 	onScroll: (direction: number) -> (),
@@ -67,22 +61,10 @@ type Props = {
 	isShiftDown: () -> boolean,
 	shiftDown: boolean,
 	-- Animation
-	animations: { AnimationInfo },
-	activeAnimationIndex: number?,
-	animationPlaying: boolean,
-	animationTimePosition: number,
-	animationLength: number,
 	onSelectAnimation: (index: number?) -> (),
 	onSetPlaying: (playing: boolean) -> (),
 	onSetTimePosition: (time: number) -> (),
 	onSetLength: (length: number) -> (),
-	lighting: {
-		lightColor: Color3,
-		ambient: Color3,
-		lightDirectionX: number,
-		lightDirectionY: number,
-		lightDirectionZ: number,
-	},
 }
 
 type CameraState = {
@@ -162,6 +144,9 @@ local function getCloneSizeMagnitude(clone: Instance): number
 end
 
 local function PreviewViewport(props: Props)
+	local store = StoreContext.useStore()
+	local state = store.state
+	local dispatch = store.dispatch
 	local theme = StudioComponents.useTheme()
 	local mouseIcon = StudioComponents.useMouseIcon()
 	local pointerInViewport, setPointerInViewport = React.useState(false)
@@ -176,26 +161,26 @@ local function PreviewViewport(props: Props)
 	local animatorRef = React.useRef(nil :: Animator?)
 
 	local cameraStateRef = React.useRef({
-		yaw = props.yaw,
-		pitch = props.pitch,
-		roll = props.roll,
-		fov = props.fov,
-		distance = props.cameraDistance,
-		offsetX = props.offsetX,
-		offsetY = props.offsetY,
-		offsetZ = props.offsetZ,
+		yaw = state.yaw,
+		pitch = state.pitch,
+		roll = state.roll,
+		fov = state.fov,
+		distance = state.cameraDistance,
+		offsetX = state.cameraOffsetX,
+		offsetY = state.cameraOffsetY,
+		offsetZ = state.cameraOffsetZ,
 	} :: CameraState)
 
 	-- Keep event handlers in sync with latest values without many tiny effects.
 	cameraStateRef.current = {
-		yaw = props.yaw,
-		pitch = props.pitch,
-		roll = props.roll,
-		fov = props.fov,
-		distance = props.cameraDistance,
-		offsetX = props.offsetX,
-		offsetY = props.offsetY,
-		offsetZ = props.offsetZ,
+		yaw = state.yaw,
+		pitch = state.pitch,
+		roll = state.roll,
+		fov = state.fov,
+		distance = state.cameraDistance,
+		offsetX = state.cameraOffsetX,
+		offsetY = state.cameraOffsetY,
+		offsetZ = state.cameraOffsetZ,
 	}
 
 	local activeInstance = if props.entry then props.entry.instance else nil
@@ -226,12 +211,12 @@ local function PreviewViewport(props: Props)
 
 		stopAndDestroyTrack(trackRef, animatorRef.current)
 
-		if not props.activeAnimationIndex then
+		if not state.activeAnimationIndex then
 			animatorRef.current = nil
 			return
 		end
 
-		local animInfo = props.animations[props.activeAnimationIndex]
+		local animInfo = state.animations[state.activeAnimationIndex]
 		if not animInfo then
 			animatorRef.current = nil
 			return
@@ -268,9 +253,9 @@ local function PreviewViewport(props: Props)
 				attempts += 1
 			end
 			if trackRef.current == track and track.Length > 0 then
-				props.onSetLength(track.Length)
+				dispatch({ type = Store.ACTIONS.SET_ANIMATION_LENGTH, value = track.Length })
 				-- Apply pose now that animation is loaded
-				applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+				applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
 				-- Re-apply camera after pose changes so the preview updates immediately
 				if camRef.current and cloneRef.current then
 					applyCamera(camRef.current, cloneRef.current, toCameraStateParams(cameraStateRef.current), boundsRef.current)
@@ -290,45 +275,45 @@ local function PreviewViewport(props: Props)
 				end
 			end
 		end
-	end, { props.activeAnimationIndex, activeInstance } :: { any })
+	end, { state.activeAnimationIndex, activeInstance } :: { any })
 
 	-- Scrub when paused (external time position change from scrubber)
 	React.useEffect(function()
 		local track = trackRef.current
 		local animator = animatorRef.current
-		if not track or not animator or props.animationPlaying then
+		if not track or not animator or state.animationPlaying then
 			return
 		end
 
-		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+		applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
 
 		local camera = camRef.current
 		local clone = cloneRef.current
 		if camera and clone then
 			applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
 		end
-	end, { props.animationTimePosition, props.animationPlaying, props.activeAnimationIndex })
+	end, { state.animationTimePosition, state.animationPlaying, state.activeAnimationIndex })
 
 	-- Apply pose when track becomes available (handles "just loaded" case when paused)
 	React.useEffect(function()
 		local track = trackRef.current
 		local animator = animatorRef.current
-		if not track or not animator or props.animationPlaying then
+		if not track or not animator or state.animationPlaying then
 			return
 		end
 
-		applyAnimationPoseAtTime(animator, track, props.animationTimePosition)
+		applyAnimationPoseAtTime(animator, track, state.animationTimePosition)
 
 		local camera = camRef.current
 		local clone = cloneRef.current
 		if camera and clone then
 			applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
 		end
-	end, { props.activeAnimationIndex })
+	end, { state.activeAnimationIndex })
 
 	-- Manual playback via StepAnimations during Heartbeat
 	React.useEffect(function()
-		if not props.animationPlaying then
+		if not state.animationPlaying then
 			return
 		end
 
@@ -347,48 +332,48 @@ local function PreviewViewport(props: Props)
 			if camera and clone then
 				applyCamera(camera, clone, toCameraStateParams(cameraStateRef.current), boundsRef.current)
 			end
-			props.onSetTimePosition(track.TimePosition)
+			dispatch({ type = Store.ACTIONS.SET_ANIMATION_TIME, value = track.TimePosition })
 		end)
 
 		return function()
 			conn:Disconnect()
 		end
-	end, { props.animationPlaying, props.activeAnimationIndex, activeInstance })
+	end, { state.animationPlaying, state.activeAnimationIndex, activeInstance })
 
 	-- Trackball / translate
 	local trackball = useTrackball(function(dx: number, dy: number)
 		local camera = camRef.current
 		local clone = cloneRef.current
-		local state = cameraStateRef.current
+		local camState = cameraStateRef.current
 		if not camera or not clone then
 			return
 		end
 
 		if props.isShiftDown() then
 			local vpWidth = if vpRef.current then vpRef.current.AbsoluteSize.X else DEFAULT_VP_WIDTH
-			local scale = getCloneSizeMagnitude(clone) * 1.18 * state.distance / vpWidth
-			local rot = CFrame.fromEulerAnglesYXZ(0, math.rad(state.yaw), 0)
-				* CFrame.fromEulerAnglesYXZ(math.rad(-state.pitch), 0, 0)
+			local scale = getCloneSizeMagnitude(clone) * 1.18 * camState.distance / vpWidth
+			local rot = CFrame.fromEulerAnglesYXZ(0, math.rad(camState.yaw), 0)
+				* CFrame.fromEulerAnglesYXZ(math.rad(-camState.pitch), 0, 0)
 			local right = rot * Vector3.new(1, 0, 0)
 			local up = rot * Vector3.new(0, 1, 0)
 			local delta = right * (-dx * scale) + up * (dy * scale)
 
-			state.offsetX += delta.X
-			state.offsetY += delta.Y
-			state.offsetZ += delta.Z
-			state.offsetX = math.clamp(state.offsetX, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
-			state.offsetY = math.clamp(state.offsetY, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
-			state.offsetZ = math.clamp(state.offsetZ, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
-			applyCamera(camera, clone, toCameraStateParams(state), boundsRef.current)
+			camState.offsetX += delta.X
+			camState.offsetY += delta.Y
+			camState.offsetZ += delta.Z
+			camState.offsetX = math.clamp(camState.offsetX, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
+			camState.offsetY = math.clamp(camState.offsetY, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
+			camState.offsetZ = math.clamp(camState.offsetZ, constants.CAMERA_OFFSET_MIN, constants.CAMERA_OFFSET_MAX)
+			applyCamera(camera, clone, toCameraStateParams(camState), boundsRef.current)
 			props.onTranslate(delta.X, delta.Y, delta.Z)
 			return
 		end
 
 		local yawDelta = -dx * ROTATION_SENSITIVITY
 		local pitchDelta = dy * ROTATION_SENSITIVITY
-		state.yaw += yawDelta
-		state.pitch += pitchDelta
-		applyCamera(camera, clone, toCameraStateParams(state), boundsRef.current)
+		camState.yaw += yawDelta
+		camState.pitch += pitchDelta
+		applyCamera(camera, clone, toCameraStateParams(camState), boundsRef.current)
 		props.onTrackball(yawDelta, pitchDelta)
 	end)
 
@@ -428,9 +413,9 @@ local function PreviewViewport(props: Props)
 		label = e(StudioComponents.Label, {
 			Text = string.format(
 				"%.0f\u{00B0}  %.0f\u{00B0}  R%.0f\u{00B0}",
-				wrapSigned180(props.yaw),
-				wrapSigned180(props.pitch),
-				wrapSigned180(props.roll)
+				wrapSigned180(state.yaw),
+				wrapSigned180(state.pitch),
+				wrapSigned180(state.roll)
 			),
 			Size = UDim2.fromScale(1, 1),
 			TextXAlignment = Enum.TextXAlignment.Center,
@@ -455,13 +440,13 @@ local function PreviewViewport(props: Props)
 	})
 
 	local animPanel = nil
-	if #props.animations > 0 then
+	if #state.animations > 0 then
 		animPanel = e(AnimationPanel, {
-			animations = props.animations,
-			activeAnimationIndex = props.activeAnimationIndex,
-			playing = props.animationPlaying,
-			timePosition = props.animationTimePosition,
-			length = props.animationLength,
+			animations = state.animations,
+			activeAnimationIndex = state.activeAnimationIndex,
+			playing = state.animationPlaying,
+			timePosition = state.animationTimePosition,
+			length = state.animationLength,
 			onSelectAnimation = props.onSelectAnimation,
 			onSetPlaying = props.onSetPlaying,
 			onSetTimePosition = props.onSetTimePosition,
@@ -579,16 +564,16 @@ local function PreviewViewport(props: Props)
 		viewport = if activeInstance
 			then e(ModelViewport, {
 				instance = activeInstance,
-				lighting = props.lighting,
+				lighting = state.lighting,
 				camera = {
-					yaw = props.yaw,
-					pitch = props.pitch,
-					roll = props.roll,
-					fov = props.fov,
-					cameraDistance = props.cameraDistance,
-					offsetX = props.offsetX,
-					offsetY = props.offsetY,
-					offsetZ = props.offsetZ,
+					yaw = state.yaw,
+					pitch = state.pitch,
+					roll = state.roll,
+					fov = state.fov,
+					cameraDistance = state.cameraDistance,
+					offsetX = state.cameraOffsetX,
+					offsetY = state.cameraOffsetY,
+					offsetZ = state.cameraOffsetZ,
 				},
 				refs = {
 					viewportFrame = vpRef,

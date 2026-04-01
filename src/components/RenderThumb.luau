@@ -18,7 +18,6 @@ type Props = {
 
 local function RenderThumb(props: Props)
 	local theme = StudioComponents.useTheme()
-	local hovered, setHovered = React.useState(false)
 
 	local s = props.thumbSize
 	local contentH = s - NAME_ROW_HEIGHT - 4
@@ -44,19 +43,12 @@ local function RenderThumb(props: Props)
 		AutoButtonColor = false,
 		LayoutOrder = props.LayoutOrder,
 		[React.Event.Activated] = props.onPreview,
-		[React.Event.MouseEnter] = function()
-			setHovered(true)
-		end,
-		[React.Event.MouseLeave] = function()
-			setHovered(false)
-		end,
 	}, {
 		stroke = e("UIStroke", {
 			Color = if props.isActive then accentColor else theme:GetColor(Enum.StudioStyleGuideColor.Border),
 			Thickness = if props.isActive then 2 else 1,
 		}),
 		content = content,
-		previewIcon = previewIcon,
 		nameLabel = e(StudioComponents.Label, {
 			Text = props.entry.modelName,
 			Size = UDim2.fromOffset(s - 4, NAME_ROW_HEIGHT),

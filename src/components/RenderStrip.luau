@@ -2,7 +2,7 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local Store = require(script.Parent.Parent.Store)
+local StoreContext = require(script.Parent.Parent.StoreContext)
 local RenderThumb = require(script.Parent.RenderThumb)
 
 local e = React.createElement
@@ -10,12 +10,12 @@ local e = React.createElement
 local PADDING_V = 9
 
 type Props = {
-	renderHistory: { Store.RenderHistoryEntry },
-	previewHistoryIndex: number?,
 	onPreviewRender: (index: number) -> (),
 }
 
 local function RenderStrip(props: Props)
+	local store = StoreContext.useStore()
+	local state = store.state
 	local theme = StudioComponents.useTheme()
 	local stripHeight, setStripHeight = React.useState(80)
 
@@ -35,7 +35,7 @@ local function RenderStrip(props: Props)
 		[React.Change.AbsoluteSize] = onAbsoluteSize,
 	}
 
-	if #props.renderHistory == 0 then
+	if #state.renderHistory == 0 then
 		return e("Frame", stripRoot, {
 			label = e(StudioComponents.Label, {
 				Text = "No renders yet",
@@ -47,12 +47,12 @@ local function RenderStrip(props: Props)
 	end
 
 	local thumbs = {}
-	for i, entry in ipairs(props.renderHistory) do
+	for i, entry in ipairs(state.renderHistory) do
 		local thumbKey = "rthumb_" .. tostring(i)
 		thumbs[thumbKey] = e(RenderThumb, {
 			entry = entry,
 			thumbSize = thumbSize,
-			isActive = props.previewHistoryIndex == i,
+			isActive = state.previewHistoryIndex == i,
 			onPreview = function()
 				props.onPreviewRender(i)
 			end,

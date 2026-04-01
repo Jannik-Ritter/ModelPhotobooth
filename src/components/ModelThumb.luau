@@ -2,7 +2,7 @@ local Packages = script.Parent.Parent.Parent.Packages
 local React = require(Packages.react)
 local StudioComponents = require(Packages.studiocomponents)
 
-local Store = require(script.Parent.Parent.Store)
+local StoreContext = require(script.Parent.Parent.StoreContext)
 local ModelViewport = require(script.Parent.ModelViewport)
 
 local e = React.createElement
@@ -23,15 +23,6 @@ type Props = {
 		image: EditableImage?,
 		isExported: boolean,
 	},
-	yaw: number,
-	pitch: number,
-	roll: number,
-	fov: number,
-	cameraDistance: number,
-	offsetX: number,
-	offsetY: number,
-	offsetZ: number,
-	lighting: Store.LightingState,
 	thumbSize: number,
 	isActive: boolean,
 	onSelect: () -> (),
@@ -41,6 +32,8 @@ type Props = {
 
 -- Thumb tile: themed InputFieldBackground card + Border/MainButton stroke (like PreviewViewport); Studio Label for caption.
 local function ModelThumb(props: Props)
+	local store = StoreContext.useStore()
+	local state = store.state
 	local theme = StudioComponents.useTheme()
 	local hovered, setHovered = React.useState(false)
 
@@ -49,16 +42,16 @@ local function ModelThumb(props: Props)
 	local contentH = s - NAME_ROW_HEIGHT - 4
 	local content = e(ModelViewport, {
 		instance = props.entry.instance,
-		lighting = props.lighting,
+		lighting = state.lighting,
 		camera = {
-			yaw = props.yaw,
-			pitch = props.pitch,
-			roll = props.roll,
-			fov = props.fov,
-			cameraDistance = props.cameraDistance,
-			offsetX = props.offsetX,
-			offsetY = props.offsetY,
-			offsetZ = props.offsetZ,
+			yaw = state.yaw,
+			pitch = state.pitch,
+			roll = state.roll,
+			fov = state.fov,
+			cameraDistance = state.cameraDistance,
+			offsetX = state.cameraOffsetX,
+			offsetY = state.cameraOffsetY,
+			offsetZ = state.cameraOffsetZ,
 		},
 		Size = UDim2.fromOffset(s - 4, contentH),
 		Position = UDim2.fromOffset(2, 2),
