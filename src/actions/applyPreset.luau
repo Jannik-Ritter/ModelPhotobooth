@@ -1,10 +1,11 @@
 local shallowMerge = require(script.Parent.Parent.lib.shallowMerge).merge
+local Constants = require(script.Parent.Parent.Constants)
 
 return function(state, action)
 	local preset = action.value
 	return shallowMerge(state, {
 		yaw = preset.yaw,
-		pitch = preset.pitch,
+		pitch = math.clamp(preset.pitch, Constants.CAMERA_PITCH_MIN, Constants.CAMERA_PITCH_MAX),
 		roll = preset.roll or 0,
 		fov = preset.fov,
 		cameraDistance = preset.cameraDistance,

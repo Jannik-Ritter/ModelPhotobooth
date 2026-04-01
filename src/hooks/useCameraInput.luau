@@ -3,10 +3,11 @@ local Constants = require(script.Parent.Parent.Constants)
 
 return function(state: Store.AppState, dispatch: (any) -> (), isCtrlDown: () -> boolean)
 	local function onTrackball(dYaw: number, dPitch: number)
+		local nextPitch = math.clamp(state.pitch + dPitch, Constants.CAMERA_PITCH_MIN, Constants.CAMERA_PITCH_MAX)
 		dispatch({
 			type = Store.ACTIONS.SET_CAMERA,
 			yaw = state.yaw + dYaw,
-			pitch = state.pitch + dPitch,
+			pitch = nextPitch,
 			fov = state.fov,
 		})
 	end

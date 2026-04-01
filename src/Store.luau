@@ -95,7 +95,7 @@ Store.PRESETS = {
 	Front = { yaw = 180, pitch = 10, fov = 70 },
 	Side = { yaw = -90, pitch = 10, fov = 70 },
 	Back = { yaw = 0, pitch = 10, fov = 70 },
-	Top = { yaw = 0, pitch = 90, fov = 70 },
+	Top = { yaw = 0, pitch = Constants.CAMERA_PITCH_MAX, fov = 70 },
 	Iso = { yaw = 18 + 45 + 180, pitch = 35, fov = 1 },
 	Angled = { yaw = 315 - 90, pitch = 20, fov = 70 },
 }

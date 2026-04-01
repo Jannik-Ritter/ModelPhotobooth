@@ -26,7 +26,7 @@ end
 local BG_PRESETS = {
 	{ label = "None", mode = "transparent", color = nil },
 	{ label = "White", mode = "color", color = Color3.new(1, 1, 1) },
-	{ label = "Black", mode = "color", color = Color3.fromRGB(18, 18, 18) },
+	{ label = "Black", mode = "color", color = Color3.fromRGB(0, 0, 0) },
 	{ label = "Custom", mode = "custom", color = nil },
 }
 local DROPDOWN_ROW_HEIGHT = 20

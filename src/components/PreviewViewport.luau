@@ -14,7 +14,6 @@ local ModelViewport = require(script.Parent.ModelViewport)
 local e = React.createElement
 
 local DEFAULT_VP_WIDTH = 400
-local ROTATION_SENSITIVITY = 0.5
 
 local CURSOR_ORBIT_HOVER = "rbxasset://SystemCursors/OpenHand"
 local CURSOR_ORBIT_DRAG = "rbxasset://SystemCursors/ClosedHand"
@@ -27,6 +26,15 @@ local function wrapSigned180(deg: number): number
 		return x - 360
 	end
 	return x
+end
+
+-- Convert screen-space drag into the unrolled camera plane so yaw/pitch orbiting
+-- keeps matching pointer direction when camera roll is non-zero.
+local function unrollDrag(dx: number, dy: number, rollDeg: number): (number, number)
+	local roll = math.rad(rollDeg)
+	local c = math.cos(roll)
+	local s = math.sin(roll)
+	return dx * c + dy * s, -dx * s + dy * c
 end
 
 type AnimationInfo = Types.AnimationInfo
@@ -164,10 +172,8 @@ local function PreviewViewport(props: Props)
 		if props.isShiftDown() then
 			local vpWidth = if vpRef.current then vpRef.current.AbsoluteSize.X else DEFAULT_VP_WIDTH
 			local scale = getCloneSizeMagnitude(clone) * 1.18 * camState.distance / vpWidth
-			local rot = CFrame.fromEulerAnglesYXZ(0, math.rad(camState.yaw), 0)
-				* CFrame.fromEulerAnglesYXZ(math.rad(-camState.pitch), 0, 0)
-			local right = rot * Vector3.new(1, 0, 0)
-			local up = rot * Vector3.new(0, 1, 0)
+			local right = camera.CFrame.RightVector
+			local up = camera.CFrame.UpVector
 			local delta = right * (-dx * scale) + up * (dy * scale)
 
 			camState.offsetX += delta.X
@@ -181,12 +187,16 @@ local function PreviewViewport(props: Props)
 			return
 		end
 
-		local yawDelta = -dx * ROTATION_SENSITIVITY
-		local pitchDelta = dy * ROTATION_SENSITIVITY
+		local orbitDx, orbitDy = unrollDrag(dx, dy, camState.roll)
+		local yawDelta = -orbitDx * Constants.ROTATION_SENSITIVITY
+		local pitchDelta = orbitDy * Constants.ROTATION_SENSITIVITY
+		local previousPitch = camState.pitch
+		local nextPitch = math.clamp(previousPitch + pitchDelta, Constants.CAMERA_PITCH_MIN, Constants.CAMERA_PITCH_MAX)
+		local appliedPitchDelta = nextPitch - previousPitch
 		camState.yaw += yawDelta
-		camState.pitch += pitchDelta
+		camState.pitch = nextPitch
 		applyCamera(camera, clone, toCameraStateParams(camState), boundsRef.current)
-		props.onTrackball(yawDelta, pitchDelta)
+		props.onTrackball(yawDelta, appliedPitchDelta)
 	end)
 
 	local isDragging = trackball.isDragging
