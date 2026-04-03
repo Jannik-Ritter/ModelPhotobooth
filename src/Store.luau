@@ -38,19 +38,7 @@ Store.ACTIONS = {
 local Types = require(script.Parent.Types)
 local Constants = require(script.Parent.Constants)
 
-export type AnimationInfo = Types.AnimationInfo
-export type RenderStatus = Types.RenderStatus
-export type RenderHistoryEntry = Types.RenderHistoryEntry
-export type ModelEntry = Types.ModelEntry
-export type OutlineState = Types.OutlineState
-export type EffectState = Types.EffectState
-export type InnerShadowState = Types.InnerShadowState
-export type OuterGlowState = Types.OuterGlowState
-export type ChromaticAberrationState = Types.ChromaticAberrationState
-export type LightingState = Types.LightingState
-export type PresetEntry = Types.PresetEntry
-export type NameInputModalState = Types.NameInputModalState
-export type AppState = Types.AppState
+type AppState = Types.AppState
 
 Store.DEFAULT_STATE = {
 	yaw = 180 + 45,

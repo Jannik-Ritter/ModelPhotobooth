@@ -133,50 +133,50 @@ local function extractAlpha(
 	cropPos: Vector2,
 	cropSz: Vector2
 ): (buffer?, number, number, string?)
-	local okW, white, errW = snapBackground(bgFrame, viewport, Color3.new(1, 1, 1))
-	if not okW then
-		return nil, 0, 0, errW
+	local okWhite, whiteImage, errWhite = snapBackground(bgFrame, viewport, Color3.new(1, 1, 1))
+	if not okWhite then
+		return nil, 0, 0, errWhite
 	end
 
-	local okB, black, errB = snapBackground(bgFrame, viewport, Color3.new(0, 0, 0))
-	if not okB then
-		white:Destroy()
-		return nil, 0, 0, errB
+	local okBlack, blackImage, errBlack = snapBackground(bgFrame, viewport, Color3.new(0, 0, 0))
+	if not okBlack then
+		whiteImage:Destroy()
+		return nil, 0, 0, errBlack
 	end
 
-	local wBuf = white:ReadPixelsBuffer(cropPos, cropSz)
-	local bBuf = black:ReadPixelsBuffer(cropPos, cropSz)
-	white:Destroy()
-	black:Destroy()
+	local whiteBuf = whiteImage:ReadPixelsBuffer(cropPos, cropSz)
+	local blackBuf = blackImage:ReadPixelsBuffer(cropPos, cropSz)
+	whiteImage:Destroy()
+	blackImage:Destroy()
 
-	local px = cropSz.X * cropSz.Y
-	local out = buffer.create(px * 4)
+	local pixelCount = cropSz.X * cropSz.Y
+	local out = buffer.create(pixelCount * 4)
 
-	for i = 0, px - 1 do
-		local o = i * 4
-		local wr = buffer.readu8(wBuf, o)
-		local wg = buffer.readu8(wBuf, o + 1)
-		local wb = buffer.readu8(wBuf, o + 2)
-		local br = buffer.readu8(bBuf, o)
-		local bg_ = buffer.readu8(bBuf, o + 1)
-		local bb = buffer.readu8(bBuf, o + 2)
+	for i = 0, pixelCount - 1 do
+		local byteOffset = i * 4
+		local whiteR = buffer.readu8(whiteBuf, byteOffset)
+		local whiteG = buffer.readu8(whiteBuf, byteOffset + 1)
+		local whiteB = buffer.readu8(whiteBuf, byteOffset + 2)
+		local blackR = buffer.readu8(blackBuf, byteOffset)
+		local blackG = buffer.readu8(blackBuf, byteOffset + 1)
+		local blackB = buffer.readu8(blackBuf, byteOffset + 2)
 
-		local outA = 255 - math.floor(((wr - br) + (wg - bg_) + (wb - bb)) / 3 + 0.5)
+		local alpha = 255 - math.round(((whiteR - blackR) + (whiteG - blackG) + (whiteB - blackB)) / 3)
 		local outR, outG, outB
 
-		if outA > Constants.MIN_VISIBLE_ALPHA then
-			local a = outA / 255
-			outR = math.floor(math.clamp(br / a, 0, 255) + 0.5)
-			outG = math.floor(math.clamp(bg_ / a, 0, 255) + 0.5)
-			outB = math.floor(math.clamp(bb / a, 0, 255) + 0.5)
+		if alpha > Constants.MIN_VISIBLE_ALPHA then
+			local alphaNorm = alpha / 255
+			outR = math.round(math.clamp(blackR / alphaNorm, 0, 255))
+			outG = math.round(math.clamp(blackG / alphaNorm, 0, 255))
+			outB = math.round(math.clamp(blackB / alphaNorm, 0, 255))
 		else
 			outR, outG, outB = 0, 0, 0
 		end
 
-		buffer.writeu8(out, o, outR)
-		buffer.writeu8(out, o + 1, outG)
-		buffer.writeu8(out, o + 2, outB)
-		buffer.writeu8(out, o + 3, outA)
+		buffer.writeu8(out, byteOffset, outR)
+		buffer.writeu8(out, byteOffset + 1, outG)
+		buffer.writeu8(out, byteOffset + 2, outB)
+		buffer.writeu8(out, byteOffset + 3, alpha)
 	end
 
 	return out, cropSz.X, cropSz.Y, nil
